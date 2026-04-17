@@ -10,8 +10,11 @@
       {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
     {{- end -}}
     {{- $description := .Summary | plainify -}}
+    {{- $descriptionHTML := ($description | markdownify) -}}
     {{- with .Params.ICSDescription -}}
-      {{- $description = . | plainify -}}
+      {{- $description = replaceRE "\\r?\\n[ \t]" "" . -}}
+      {{- $description = replaceRE "\\r" "" $description -}}
+      {{- $descriptionHTML = ($description | markdownify) -}}
     {{- end -}}
     {{- $eventType := or .Params.event_type .Type "event" -}}
     {{- $event := dict
@@ -25,6 +28,7 @@
         "externalURL" (or .Params.external_url "")
         "rsvpURL" (or .Params.rsvp "")
         "description" $description
+        "descriptionHTML" (printf "%s" $descriptionHTML)
       )
     -}}
     {{- $events = $events | append $event -}}
@@ -80,6 +84,15 @@
     display: flex;
     flex-wrap: wrap;
     gap: .6rem;
+  }
+  .events-calendar-description p {
+    margin: .5rem 0;
+  }
+  .events-calendar-description p:first-child {
+    margin-top: 0;
+  }
+  .events-calendar-description p:last-child {
+    margin-bottom: 0;
   }
 </style>
 
@@ -182,10 +195,16 @@
         detailsContainer.appendChild(where);
       }
 
+      const descriptionHTML = event.extendedProps && event.extendedProps.descriptionHTML;
       const description = event.extendedProps && event.extendedProps.description;
-      if (description) {
-        const desc = document.createElement('p');
-        desc.textContent = description;
+      if (descriptionHTML || description) {
+        const desc = document.createElement('div');
+        desc.className = 'events-calendar-description';
+        if (descriptionHTML) {
+          desc.innerHTML = descriptionHTML;
+        } else {
+          desc.textContent = description;
+        }
         detailsContainer.appendChild(desc);
       }
 
