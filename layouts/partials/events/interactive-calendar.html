@@ -1,0 +1,270 @@
+{{- $pages := collections.Sort .Pages "Params.startdate" -}}
+{{- $events := slice -}}
+{{- range $pages -}}
+  {{- $startRaw := or .Params.startdate .Params.startDate -}}
+  {{- if $startRaw -}}
+    {{- $start := time.AsTime $startRaw -}}
+    {{- $endRaw := or .Params.enddate .Params.endDate -}}
+    {{- $end := "" -}}
+    {{- if $endRaw -}}
+      {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
+    {{- end -}}
+    {{- $description := .Summary | plainify -}}
+    {{- with .Params.ICSDescription -}}
+      {{- $description = . | plainify -}}
+    {{- end -}}
+    {{- $eventType := or .Params.event_type .Type "event" -}}
+    {{- $event := dict
+      "title" .Title
+      "start" ($start.Format "2006-01-02T15:04:05Z07:00")
+      "end" $end
+      "url" .Permalink
+      "extendedProps" (dict
+        "location" (or .Params.location "")
+        "eventType" $eventType
+        "externalURL" (or .Params.external_url "")
+        "rsvpURL" (or .Params.rsvp "")
+        "description" $description
+      )
+    -}}
+    {{- $events = $events | append $event -}}
+  {{- end -}}
+{{- end -}}
+{{- $idBase := .RelPermalink | urlize -}}
+{{- with .File -}}
+  {{- $idBase = .UniqueID -}}
+{{- end -}}
+{{- $calendarId := printf "events-calendar-%s" $idBase -}}
+{{- $filtersId := printf "events-filters-%s" $idBase -}}
+{{- $detailsId := printf "events-details-%s" $idBase -}}
+{{- $showPastId := printf "events-show-past-%s" $idBase -}}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css">
+<style>
+  .events-calendar-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem;
+    margin: 1rem 0;
+  }
+  .events-calendar-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    margin-right: .6rem;
+  }
+  .events-calendar-filter {
+    border: 1px solid #bbb;
+    background: #fff;
+    color: #333;
+    border-radius: 999px;
+    padding: .2rem .7rem;
+    cursor: pointer;
+    font-size: .85rem;
+  }
+  .events-calendar-filter.active {
+    background: #333;
+    border-color: #333;
+    color: #fff;
+  }
+  .events-calendar-details {
+    margin-top: 1rem;
+    padding: .9rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+  .events-calendar-links {
+    margin-top: .65rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+  }
+</style>
+
+<div class="events-calendar-controls">
+  <label class="events-calendar-toggle" for="{{ $showPastId }}">
+    <input id="{{ $showPastId }}" type="checkbox">
+    Show past events
+  </label>
+  <div id="{{ $filtersId }}"></div>
+</div>
+
+<div id="{{ $calendarId }}"></div>
+
+<div id="{{ $detailsId }}" class="events-calendar-details">
+  <strong>Event details</strong>
+  <p>Select an event to preview details and links.</p>
+</div>
+
+<noscript>
+  <h3>Upcoming Events</h3>
+  <ul class="posts">
+    {{- range first 25 (collections.Sort $pages "Params.startdate") -}}
+      {{- $startRaw := or .Params.startdate .Params.startDate -}}
+      {{- if $startRaw -}}
+        {{- $start := time.AsTime $startRaw -}}
+        {{- $minus1d := time.ParseDuration "-24h" -}}
+        {{- if ($start.After (time.Now.Add $minus1d)) -}}
+          <li>
+            <a href="{{ .Permalink }}">{{ .Title }}</a>
+            <time class="pull-right post-list">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
+          </li>
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  </ul>
+</noscript>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+<script>
+  (() => {
+    const calendarEl = document.getElementById('{{ $calendarId }}');
+    if (!calendarEl || !window.FullCalendar) return;
+
+    const showPastToggle = document.getElementById('{{ $showPastId }}');
+    const filtersContainer = document.getElementById('{{ $filtersId }}');
+    const detailsContainer = document.getElementById('{{ $detailsId }}');
+    const allEvents = {{ $events | jsonify | safeJS }};
+    const selectedTypes = new Set();
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    function normalizeType(value) {
+      return (value || 'event').toString().toLowerCase();
+    }
+
+    function titleType(value) {
+      const clean = normalizeType(value).replace(/[-_]/g, ' ');
+      return clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
+
+    function filteredEvents() {
+      const showPast = showPastToggle && showPastToggle.checked;
+      return allEvents.filter((event) => {
+        const eventType = normalizeType(event.extendedProps && event.extendedProps.eventType);
+        const matchesType = selectedTypes.size === 0 || selectedTypes.has(eventType);
+        const endForFilter = new Date(event.end || event.start);
+        const matchesDate = showPast || endForFilter >= startOfToday;
+        return matchesType && matchesDate;
+      });
+    }
+
+    function eventLink(label, href) {
+      if (!href) return null;
+      const link = document.createElement('a');
+      link.href = href;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.textContent = label;
+      return link;
+    }
+
+    function renderDetails(event) {
+      detailsContainer.replaceChildren();
+
+      const title = document.createElement('h3');
+      title.textContent = event.title;
+      detailsContainer.appendChild(title);
+
+      const when = document.createElement('p');
+      const start = event.start ? event.start.toLocaleString() : '';
+      const end = event.end ? event.end.toLocaleString() : '';
+      when.textContent = end ? `${start} - ${end}` : start;
+      detailsContainer.appendChild(when);
+
+      const location = event.extendedProps && event.extendedProps.location;
+      if (location) {
+        const where = document.createElement('p');
+        where.textContent = `Location: ${location}`;
+        detailsContainer.appendChild(where);
+      }
+
+      const description = event.extendedProps && event.extendedProps.description;
+      if (description) {
+        const desc = document.createElement('p');
+        desc.textContent = description;
+        detailsContainer.appendChild(desc);
+      }
+
+      const links = document.createElement('div');
+      links.className = 'events-calendar-links';
+
+      const detailsLink = eventLink('View event details', event.url);
+      if (detailsLink) links.appendChild(detailsLink);
+
+      const rsvpLink = eventLink('RSVP', event.extendedProps && event.extendedProps.rsvpURL);
+      if (rsvpLink) links.appendChild(rsvpLink);
+
+      const externalLink = eventLink('External event page', event.extendedProps && event.extendedProps.externalURL);
+      if (externalLink) links.appendChild(externalLink);
+
+      if (links.children.length > 0) {
+        detailsContainer.appendChild(links);
+      }
+    }
+
+    const eventTypes = [...new Set(allEvents.map((event) => normalizeType(event.extendedProps && event.extendedProps.eventType)))].sort();
+    eventTypes.forEach((eventType) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'events-calendar-filter';
+      button.textContent = titleType(eventType);
+      button.addEventListener('click', () => {
+        if (selectedTypes.has(eventType)) {
+          selectedTypes.delete(eventType);
+          button.classList.remove('active');
+        } else {
+          selectedTypes.add(eventType);
+          button.classList.add('active');
+        }
+        calendar.refetchEvents();
+      });
+      filtersContainer.appendChild(button);
+    });
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      navLinks: true,
+      nowIndicator: true,
+      dayMaxEvents: true,
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listMonth'
+      },
+      eventTimeFormat: {
+        hour: 'numeric',
+        minute: '2-digit',
+        meridiem: 'short'
+      },
+      events: (_fetchInfo, successCallback) => {
+        successCallback(filteredEvents());
+      },
+      eventClick: (info) => {
+        info.jsEvent.preventDefault();
+        renderDetails(info.event);
+      }
+    });
+
+    if (showPastToggle) {
+      showPastToggle.addEventListener('change', () => calendar.refetchEvents());
+    }
+
+    calendar.render();
+
+    const firstUpcoming = filteredEvents()
+      .slice()
+      .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0];
+    if (firstUpcoming) {
+      renderDetails({
+        ...firstUpcoming,
+        start: new Date(firstUpcoming.start),
+        end: firstUpcoming.end ? new Date(firstUpcoming.end) : null
+      });
+    }
+  })();
+</script>
