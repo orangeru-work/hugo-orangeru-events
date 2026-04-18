@@ -1,4 +1,4 @@
-{{- $pages := collections.Sort .Pages "Params.startdate" -}}
+{{- $pages := .Pages -}}
 {{- $events := slice -}}
 {{- range $pages -}}
   {{- $startRaw := or .Params.startdate .Params.startDate -}}
@@ -9,6 +9,7 @@
     {{- if $endRaw -}}
       {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
     {{- end -}}
+
     {{- $description := .Summary | plainify -}}
     {{- $descriptionHTML := ($description | markdownify) -}}
     {{- with .Params.ICSDescription -}}
@@ -16,7 +17,21 @@
       {{- $description = replaceRE "\\r" "" $description -}}
       {{- $descriptionHTML = ($description | markdownify) -}}
     {{- end -}}
-    {{- $eventType := or .Params.event_type .Type "event" -}}
+
+    {{- $category := "other" -}}
+    {{- if isset .Params "category" -}}
+      {{- $category = lower (printf "%v" .Params.category) -}}
+    {{- else if isset .Params "event_type" -}}
+      {{- $category = lower (printf "%v" .Params.event_type) -}}
+    {{- else if isset .Params "patr" -}}
+      {{- if .Params.patr -}}
+        {{- $category = "club" -}}
+      {{- else -}}
+        {{- $category = "other" -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $category = replaceRE "[^a-z0-9_-]+" "-" $category -}}
+
     {{- $event := dict
       "title" .Title
       "start" ($start.Format "2006-01-02T15:04:05Z07:00")
@@ -24,7 +39,7 @@
       "url" .Permalink
       "extendedProps" (dict
         "location" (or .Params.location "")
-        "eventType" $eventType
+        "category" $category
         "externalURL" (or .Params.external_url "")
         "rsvpURL" (or .Params.rsvp "")
         "description" $description
@@ -34,12 +49,13 @@
     {{- $events = $events | append $event -}}
   {{- end -}}
 {{- end -}}
+
 {{- $idBase := .RelPermalink | urlize -}}
 {{- with .File -}}
   {{- $idBase = .UniqueID -}}
 {{- end -}}
 {{- $calendarId := printf "events-calendar-%s" $idBase -}}
-{{- $filtersId := printf "events-filters-%s" $idBase -}}
+{{- $legendId := printf "events-legend-%s" $idBase -}}
 {{- $detailsId := printf "events-details-%s" $idBase -}}
 {{- $showPastId := printf "events-show-past-%s" $idBase -}}
 
@@ -49,28 +65,55 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: .6rem;
+    gap: .85rem;
     margin: 1rem 0;
   }
   .events-calendar-toggle {
     display: inline-flex;
     align-items: center;
     gap: .35rem;
-    margin-right: .6rem;
+    margin-right: .25rem;
   }
-  .events-calendar-filter {
-    border: 1px solid #bbb;
+  .events-calendar-legend-wrap {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+  }
+  .events-calendar-legend-title {
+    font-size: .85rem;
+    font-weight: 600;
+    color: #374151;
+  }
+  .events-calendar-legend {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+  }
+  .events-calendar-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border: 1px solid #c7c7c7;
     background: #fff;
     color: #333;
     border-radius: 999px;
-    padding: .2rem .7rem;
+    padding: .25rem .7rem;
     cursor: pointer;
-    font-size: .85rem;
+    font-size: .82rem;
+    line-height: 1.2;
   }
-  .events-calendar-filter.active {
-    background: #333;
-    border-color: #333;
-    color: #fff;
+  .events-calendar-legend-item.active {
+    border-color: #111827;
+    box-shadow: inset 0 0 0 1px #111827;
+  }
+  .events-calendar-legend-swatch {
+    width: .72rem;
+    height: .72rem;
+    border-radius: 999px;
+    border: 1px solid rgba(17, 24, 39, 0.35);
+    flex: 0 0 auto;
   }
   .events-calendar-details {
     margin-top: 1rem;
@@ -101,7 +144,10 @@
     <input id="{{ $showPastId }}" type="checkbox">
     Show past events
   </label>
-  <div id="{{ $filtersId }}"></div>
+  <div class="events-calendar-legend-wrap">
+    <span class="events-calendar-legend-title">Filter categories:</span>
+    <div id="{{ $legendId }}" class="events-calendar-legend"></div>
+  </div>
 </div>
 
 <div id="{{ $calendarId }}"></div>
@@ -114,7 +160,7 @@
 <noscript>
   <h3>Upcoming Events</h3>
   <ul class="posts">
-    {{- range first 25 (collections.Sort $pages "Params.startdate") -}}
+    {{- range first 25 .Pages.ByDate -}}
       {{- $startRaw := or .Params.startdate .Params.startDate -}}
       {{- if $startRaw -}}
         {{- $start := time.AsTime $startRaw -}}
@@ -137,32 +183,84 @@
     if (!calendarEl || !window.FullCalendar) return;
 
     const showPastToggle = document.getElementById('{{ $showPastId }}');
-    const filtersContainer = document.getElementById('{{ $filtersId }}');
+    const legendContainer = document.getElementById('{{ $legendId }}');
     const detailsContainer = document.getElementById('{{ $detailsId }}');
     const allEvents = {{ $events | jsonify | safeJS }};
-    const selectedTypes = new Set();
+    const selectedCategories = new Set();
+    const legendButtons = new Map();
+    const categoryColorMap = new Map();
+
+    const defaultCategoryColors = {
+      club: '#bfdbfe',
+      meeting: '#bbf7d0',
+      other: '#e5e7eb'
+    };
+    const palette = [
+      '#fef3c7', '#fde68a', '#ddd6fe', '#fecdd3', '#bae6fd', '#fecaca', '#d9f99d', '#fbcfe8'
+    ];
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    function normalizeType(value) {
-      return (value || 'event').toString().toLowerCase();
+    function normalizeCategory(value) {
+      const raw = (value || 'other').toString().toLowerCase().trim();
+      return raw || 'other';
     }
 
-    function titleType(value) {
-      const clean = normalizeType(value).replace(/[-_]/g, ' ');
-      return clean.charAt(0).toUpperCase() + clean.slice(1);
+    function categoryLabel(value) {
+      return normalizeCategory(value)
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function sortedCategories() {
+      const categories = [...new Set(allEvents.map((event) => normalizeCategory(event.extendedProps && event.extendedProps.category)))];
+      categories.sort();
+      return categories;
+    }
+
+    function categoryCounts() {
+      const counts = new Map();
+      allEvents.forEach((event) => {
+        const category = normalizeCategory(event.extendedProps && event.extendedProps.category);
+        counts.set(category, (counts.get(category) || 0) + 1);
+      });
+      return counts;
+    }
+
+    function colorForCategory(category) {
+      return categoryColorMap.get(normalizeCategory(category)) || defaultCategoryColors.other;
+    }
+
+    function refreshLegendState(allButton) {
+      const allSelected = selectedCategories.size === 0;
+      allButton.classList.toggle('active', allSelected);
+      legendButtons.forEach((button, category) => {
+        button.classList.toggle('active', allSelected || selectedCategories.has(category));
+      });
     }
 
     function filteredEvents() {
       const showPast = showPastToggle && showPastToggle.checked;
-      return allEvents.filter((event) => {
-        const eventType = normalizeType(event.extendedProps && event.extendedProps.eventType);
-        const matchesType = selectedTypes.size === 0 || selectedTypes.has(eventType);
-        const endForFilter = new Date(event.end || event.start);
-        const matchesDate = showPast || endForFilter >= startOfToday;
-        return matchesType && matchesDate;
-      });
+      return allEvents
+        .filter((event) => {
+          const category = normalizeCategory(event.extendedProps && event.extendedProps.category);
+          const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(category);
+          const endForFilter = new Date(event.end || event.start);
+          const matchesDate = showPast || endForFilter >= startOfToday;
+          return matchesCategory && matchesDate;
+        })
+        .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+        .map((event) => {
+          const category = normalizeCategory(event.extendedProps && event.extendedProps.category);
+          const color = colorForCategory(category);
+          return {
+            ...event,
+            backgroundColor: color,
+            borderColor: color,
+            textColor: '#111827'
+          };
+        });
     }
 
     function eventLink(label, href) {
@@ -181,6 +279,11 @@
       const title = document.createElement('h3');
       title.textContent = event.title;
       detailsContainer.appendChild(title);
+
+      const meta = document.createElement('p');
+      const category = normalizeCategory(event.extendedProps && event.extendedProps.category);
+      meta.textContent = `Category: ${categoryLabel(category)}`;
+      detailsContainer.appendChild(meta);
 
       const when = document.createElement('p');
       const start = event.start ? event.start.toLocaleString() : '';
@@ -225,24 +328,58 @@
       }
     }
 
-    const eventTypes = [...new Set(allEvents.map((event) => normalizeType(event.extendedProps && event.extendedProps.eventType)))].sort();
-    eventTypes.forEach((eventType) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'events-calendar-filter';
-      button.textContent = titleType(eventType);
-      button.addEventListener('click', () => {
-        if (selectedTypes.has(eventType)) {
-          selectedTypes.delete(eventType);
-          button.classList.remove('active');
+    function buildLegend(calendar) {
+      const categories = sortedCategories();
+      const counts = categoryCounts();
+      let paletteIndex = 0;
+      categories.forEach((category) => {
+        if (defaultCategoryColors[category]) {
+          categoryColorMap.set(category, defaultCategoryColors[category]);
         } else {
-          selectedTypes.add(eventType);
-          button.classList.add('active');
+          categoryColorMap.set(category, palette[paletteIndex % palette.length]);
+          paletteIndex += 1;
         }
+      });
+
+      const allButton = document.createElement('button');
+      allButton.type = 'button';
+      allButton.className = 'events-calendar-legend-item active';
+      allButton.textContent = `All (${allEvents.length})`;
+      allButton.addEventListener('click', () => {
+        selectedCategories.clear();
+        refreshLegendState(allButton);
         calendar.refetchEvents();
       });
-      filtersContainer.appendChild(button);
-    });
+      legendContainer.appendChild(allButton);
+
+      categories.forEach((category) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'events-calendar-legend-item active';
+
+        const swatch = document.createElement('span');
+        swatch.className = 'events-calendar-legend-swatch';
+        swatch.style.backgroundColor = colorForCategory(category);
+
+        const label = document.createElement('span');
+        label.textContent = `${categoryLabel(category)} (${counts.get(category) || 0})`;
+
+        button.appendChild(swatch);
+        button.appendChild(label);
+        button.addEventListener('click', () => {
+          if (selectedCategories.has(category)) {
+            selectedCategories.delete(category);
+          } else {
+            selectedCategories.add(category);
+          }
+          refreshLegendState(allButton);
+          calendar.refetchEvents();
+        });
+
+        legendButtons.set(category, button);
+        legendContainer.appendChild(button);
+      });
+    }
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: 'dayGridMonth',
@@ -269,15 +406,15 @@
       }
     });
 
+    buildLegend(calendar);
+
     if (showPastToggle) {
       showPastToggle.addEventListener('change', () => calendar.refetchEvents());
     }
 
     calendar.render();
 
-    const firstUpcoming = filteredEvents()
-      .slice()
-      .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))[0];
+    const firstUpcoming = filteredEvents()[0];
     if (firstUpcoming) {
       renderDetails({
         ...firstUpcoming,

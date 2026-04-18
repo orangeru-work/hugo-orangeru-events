@@ -29,8 +29,17 @@ This partial supports event front matter using either:
 
 Optional fields:
 
-- `event_type`
+- `category` (preferred)
+- `event_type` (fallback for older content)
+- `patr` (legacy fallback: `true` => `club`, `false` => `other`)
 - `location`
 - `external_url`
 - `rsvp`
 - `ICSDescription`
+
+## Category + legend behavior
+
+- Events are grouped and filtered by `category`
+- The calendar renders a color-coded legend with category counts
+- Clicking legend chips filters the calendar
+- If no category is set, events default to `other`
