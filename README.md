@@ -43,3 +43,9 @@ Optional fields:
 - The calendar renders a color-coded legend with category counts
 - Clicking legend chips filters the calendar
 - If no category is set, events default to `other`
+
+## Mobile subscribe button
+
+- The calendar includes a **Subscribe to calendar** button for the section feed at `events/index.ics`
+- On iPhone/iPad, it opens the feed with the `webcal://` scheme
+- On Android, it opens Google Calendar subscribe flow with the same ICS feed URL

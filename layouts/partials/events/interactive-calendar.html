@@ -58,6 +58,8 @@
 {{- $legendId := printf "events-legend-%s" $idBase -}}
 {{- $detailsId := printf "events-details-%s" $idBase -}}
 {{- $showPastId := printf "events-show-past-%s" $idBase -}}
+{{- $subscribeId := printf "events-subscribe-%s" $idBase -}}
+{{- $icsFeedURL := printf "%sindex.ics" .Permalink -}}
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css">
 <style>
@@ -90,6 +92,26 @@
     flex-wrap: wrap;
     align-items: center;
     gap: .45rem;
+  }
+  .events-calendar-subscribe {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+    border-radius: 999px;
+    padding: .4rem .85rem;
+    font-size: .85rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .events-calendar-subscribe:hover,
+  .events-calendar-subscribe:focus-visible {
+    background: #1e40af;
+    border-color: #1e40af;
+    color: #fff;
   }
   .events-calendar-legend-item {
     display: inline-flex;
@@ -140,6 +162,9 @@
 </style>
 
 <div class="events-calendar-controls">
+  <button id="{{ $subscribeId }}" class="events-calendar-subscribe" type="button">
+    Subscribe to calendar
+  </button>
   <label class="events-calendar-toggle" for="{{ $showPastId }}">
     <input id="{{ $showPastId }}" type="checkbox">
     Show past events
@@ -183,9 +208,11 @@
     if (!calendarEl || !window.FullCalendar) return;
 
     const showPastToggle = document.getElementById('{{ $showPastId }}');
+    const subscribeButton = document.getElementById('{{ $subscribeId }}');
     const legendContainer = document.getElementById('{{ $legendId }}');
     const detailsContainer = document.getElementById('{{ $detailsId }}');
     const allEvents = {{ $events | jsonify | safeJS }};
+    const icsFeedUrl = {{ $icsFeedURL | jsonify | safeJS }};
     const selectedCategories = new Set();
     const legendButtons = new Map();
     const categoryColorMap = new Map();
@@ -217,6 +244,29 @@
       const categories = [...new Set(allEvents.map((event) => normalizeCategory(event.extendedProps && event.extendedProps.category)))];
       categories.sort();
       return categories;
+    }
+
+    function detectPlatform() {
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) return 'ios';
+      if (/Android/i.test(ua)) return 'android';
+      return 'other';
+    }
+
+    function toWebcal(url) {
+      if (typeof url !== 'string') return url;
+      if (url.startsWith('https://')) return `webcal://${url.slice(8)}`;
+      if (url.startsWith('http://')) return `webcal://${url.slice(7)}`;
+      return url;
+    }
+
+    function subscribeTarget(platform) {
+      if (platform === 'ios') return toWebcal(icsFeedUrl);
+      if (platform === 'android') {
+        return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(icsFeedUrl)}`;
+      }
+      return icsFeedUrl;
     }
 
     function categoryCounts() {
@@ -407,6 +457,18 @@
     });
 
     buildLegend(calendar);
+
+    if (subscribeButton) {
+      const platform = detectPlatform();
+      if (platform === 'ios') {
+        subscribeButton.textContent = 'Subscribe on iPhone';
+      } else if (platform === 'android') {
+        subscribeButton.textContent = 'Subscribe on Android';
+      }
+      subscribeButton.addEventListener('click', () => {
+        window.location.href = subscribeTarget(platform);
+      });
+    }
 
     if (showPastToggle) {
       showPastToggle.addEventListener('change', () => calendar.refetchEvents());
