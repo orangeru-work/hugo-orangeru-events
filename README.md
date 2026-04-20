@@ -44,8 +44,18 @@ Optional fields:
 - Clicking legend chips filters the calendar
 - If no category is set, events default to `other`
 
+## Default month-view display
+
+- In month view, event bullets and inline times are hidden by default
+- Event titles are emphasized and allowed to wrap for readability
+
 ## Mobile subscribe button
 
 - The calendar includes a **Subscribe to calendar** button for the section feed at `events/index.ics`
 - On iPhone/iPad, it opens the feed with the `webcal://` scheme
 - On Android, it opens Google Calendar subscribe flow with the same ICS feed URL
+
+## External link rendering
+
+- If `ICSDescription` includes the same URL as `external_url`, the duplicate raw URL is removed from the details description
+- The event details panel keeps a single labeled link: **External event page**
