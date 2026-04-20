@@ -10,11 +10,18 @@
       {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
     {{- end -}}
 
+    {{- $externalURL := (or .Params.external_url "") -}}
     {{- $description := .Summary | plainify -}}
     {{- $descriptionHTML := ($description | markdownify) -}}
     {{- with .Params.ICSDescription -}}
       {{- $description = replaceRE "\\r?\\n[ \t]" "" . -}}
       {{- $description = replaceRE "\\r" "" $description -}}
+      {{- $descriptionHTML = ($description | markdownify) -}}
+    {{- end -}}
+    {{- if $externalURL -}}
+      {{- $description = replace $description $externalURL "" -}}
+      {{- $description = replaceRE "\\n{3,}" "\n\n" $description -}}
+      {{- $description = trim $description " \n\r\t" -}}
       {{- $descriptionHTML = ($description | markdownify) -}}
     {{- end -}}
 
@@ -40,7 +47,7 @@
       "extendedProps" (dict
         "location" (or .Params.location "")
         "category" $category
-        "externalURL" (or .Params.external_url "")
+        "externalURL" $externalURL
         "rsvpURL" (or .Params.rsvp "")
         "description" $description
         "descriptionHTML" (printf "%s" $descriptionHTML)
