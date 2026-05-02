@@ -288,10 +288,7 @@
     }
 
     function subscribeTarget(platform) {
-      if (platform === 'ios') return toWebcal(icsFeedUrl);
-      if (platform === 'android') {
-        return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(toWebcal(icsFeedUrl))}`;
-      }
+      if (platform === 'ios' || platform === 'android') return toWebcal(icsFeedUrl);
       return icsFeedUrl;
     }
 
