@@ -290,7 +290,7 @@
     function subscribeTarget(platform) {
       if (platform === 'ios') return toWebcal(icsFeedUrl);
       if (platform === 'android') {
-        return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(icsFeedUrl)}`;
+        return `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(toWebcal(icsFeedUrl))}`;
       }
       return icsFeedUrl;
     }
