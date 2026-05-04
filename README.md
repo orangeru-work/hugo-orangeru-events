@@ -70,7 +70,7 @@ Options:
 When subscribe is enabled:
 
 - On iPhone/iPad, it opens `webcal://...`
-- On Android, it first opens `webcal://...` (for native calendar app handoff), then falls back to Google Calendar subscribe flow
+- On Android, it opens Google Calendar subscribe flow with the same ICS feed URL
 - On desktop, it opens a subscribe menu (Google Calendar, Outlook.com, Apple Calendar/webcal, direct ICS download)
 
 ## Default month-view display
