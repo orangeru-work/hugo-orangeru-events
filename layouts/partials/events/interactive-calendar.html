@@ -1,3 +1,26 @@
+{{- $calendarConfig := dict -}}
+{{- with .Site.Params.eventsCalendar -}}
+  {{- $calendarConfig = . -}}
+{{- end -}}
+{{- with .Params.eventsCalendar -}}
+  {{- $calendarConfig = merge $calendarConfig . -}}
+{{- end -}}
+
+{{- $categoryColors := dict -}}
+{{- if isset $calendarConfig "categoryColors" -}}
+  {{- $categoryColors = index $calendarConfig "categoryColors" -}}
+{{- end -}}
+
+{{- $showSubscribeButton := true -}}
+{{- if isset $calendarConfig "showSubscribeButton" -}}
+  {{- $showSubscribeButton = index $calendarConfig "showSubscribeButton" -}}
+{{- end -}}
+
+{{- $subscribeFeedURL := printf "%sindex.ics" .RelPermalink -}}
+{{- if isset $calendarConfig "subscribeFeedURL" -}}
+  {{- $subscribeFeedURL = printf "%v" (index $calendarConfig "subscribeFeedURL") -}}
+{{- end -}}
+
 {{- $pages := .Pages -}}
 {{- $events := slice -}}
 {{- range $pages -}}
@@ -13,7 +36,7 @@
     {{- $externalURL := (or .Params.external_url "") -}}
     {{- $description := .Summary | plainify -}}
     {{- $descriptionHTML := ($description | markdownify) -}}
-    {{- with .Params.ICSDescription -}}
+    {{- with (or .Params.calendar_description .Params.ics_description .Params.ICSDescription) -}}
       {{- $description = replaceRE "\\r?\\n[ \t]" "" . -}}
       {{- $description = replaceRE "\\r" "" $description -}}
       {{- $descriptionHTML = ($description | markdownify) -}}
@@ -30,12 +53,6 @@
       {{- $category = lower (printf "%v" .Params.category) -}}
     {{- else if isset .Params "event_type" -}}
       {{- $category = lower (printf "%v" .Params.event_type) -}}
-    {{- else if isset .Params "patr" -}}
-      {{- if .Params.patr -}}
-        {{- $category = "club" -}}
-      {{- else -}}
-        {{- $category = "other" -}}
-      {{- end -}}
     {{- end -}}
     {{- $category = replaceRE "[^a-z0-9_-]+" "-" $category -}}
 
@@ -66,7 +83,7 @@
 {{- $detailsId := printf "events-details-%s" $idBase -}}
 {{- $showPastId := printf "events-show-past-%s" $idBase -}}
 {{- $subscribeId := printf "events-subscribe-%s" $idBase -}}
-{{- $icsFeedURL := printf "%sindex.ics" .Permalink -}}
+{{- $subscribeMenuId := printf "events-subscribe-menu-%s" $idBase -}}
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css">
 <style>
@@ -139,6 +156,35 @@
     border-color: #1e40af;
     color: #fff;
   }
+  .events-calendar-subscribe-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+  .events-calendar-subscribe-menu {
+    position: absolute;
+    left: 0;
+    top: calc(100% + .4rem);
+    min-width: 15rem;
+    padding: .4rem;
+    border: 1px solid #d1d5db;
+    border-radius: .5rem;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.12);
+    z-index: 10;
+  }
+  .events-calendar-subscribe-menu a {
+    display: block;
+    color: #111827;
+    text-decoration: none;
+    padding: .45rem .5rem;
+    border-radius: .35rem;
+    font-size: .86rem;
+  }
+  .events-calendar-subscribe-menu a:hover,
+  .events-calendar-subscribe-menu a:focus-visible {
+    background: #eff6ff;
+    color: #1d4ed8;
+  }
   .events-calendar-legend-item {
     display: inline-flex;
     align-items: center;
@@ -185,12 +231,33 @@
   .events-calendar-description p:last-child {
     margin-bottom: 0;
   }
+  .events-calendar-noscript-list {
+    list-style: none;
+    margin: .75rem 0 0;
+    padding: 0;
+  }
+  .events-calendar-noscript-list li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .25rem 0;
+  }
+  .events-calendar-noscript-time {
+    color: #374151;
+    white-space: nowrap;
+  }
 </style>
 
 <div class="events-calendar-controls">
-  <button id="{{ $subscribeId }}" class="events-calendar-subscribe" type="button">
-    Subscribe to calendar
-  </button>
+  {{- if and $showSubscribeButton $subscribeFeedURL -}}
+  <div class="events-calendar-subscribe-wrap">
+    <button id="{{ $subscribeId }}" class="events-calendar-subscribe" type="button" aria-haspopup="true" aria-expanded="false">
+      Subscribe to calendar
+    </button>
+    <div id="{{ $subscribeMenuId }}" class="events-calendar-subscribe-menu" hidden></div>
+  </div>
+  {{- end -}}
   <label class="events-calendar-toggle" for="{{ $showPastId }}">
     <input id="{{ $showPastId }}" type="checkbox">
     Show past events
@@ -210,7 +277,7 @@
 
 <noscript>
   <h3>Upcoming Events</h3>
-  <ul class="posts">
+  <ul class="events-calendar-noscript-list">
     {{- range first 25 .Pages.ByDate -}}
       {{- $startRaw := or .Params.startdate .Params.startDate -}}
       {{- if $startRaw -}}
@@ -219,7 +286,7 @@
         {{- if ($start.After (time.Now.Add $minus1d)) -}}
           <li>
             <a href="{{ .Permalink }}">{{ .Title }}</a>
-            <time class="pull-right post-list">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
+            <time class="events-calendar-noscript-time">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
           </li>
         {{- end -}}
       {{- end -}}
@@ -235,19 +302,17 @@
 
     const showPastToggle = document.getElementById('{{ $showPastId }}');
     const subscribeButton = document.getElementById('{{ $subscribeId }}');
+    const subscribeMenu = document.getElementById('{{ $subscribeMenuId }}');
     const legendContainer = document.getElementById('{{ $legendId }}');
     const detailsContainer = document.getElementById('{{ $detailsId }}');
     const allEvents = {{ $events | jsonify | safeJS }};
-    const icsFeedUrl = {{ $icsFeedURL | jsonify | safeJS }};
+    const icsFeedUrl = {{ $subscribeFeedURL | jsonify | safeJS }};
+    const configuredCategoryColors = {{ $categoryColors | jsonify | safeJS }};
     const selectedCategories = new Set();
     const legendButtons = new Map();
     const categoryColorMap = new Map();
 
-    const defaultCategoryColors = {
-      club: '#bfdbfe',
-      meeting: '#bbf7d0',
-      other: '#e5e7eb'
-    };
+    const defaultCategoryColor = '#e5e7eb';
     const palette = [
       '#fef3c7', '#fde68a', '#ddd6fe', '#fecdd3', '#bae6fd', '#fecaca', '#d9f99d', '#fbcfe8'
     ];
@@ -259,6 +324,10 @@
       const raw = (value || 'other').toString().toLowerCase().trim();
       return raw || 'other';
     }
+
+    const normalizedConfiguredCategoryColors = Object.fromEntries(
+      Object.entries(configuredCategoryColors || {}).map(([key, value]) => [normalizeCategory(key), value])
+    );
 
     function categoryLabel(value) {
       return normalizeCategory(value)
@@ -280,16 +349,51 @@
       return 'other';
     }
 
+    function normalizeFeedURL(url) {
+      if (typeof url !== 'string') return '';
+      const raw = url.trim();
+      if (!raw) return '';
+      const localHostnames = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+      const normalizedRaw = raw.startsWith('webcal://')
+        ? `https://${raw.slice(9)}`
+        : raw;
+      const absolute = new URL(normalizedRaw, window.location.href);
+      const feedIsLocal = localHostnames.has(absolute.hostname);
+      const currentIsLocal = localHostnames.has(window.location.hostname);
+      if (feedIsLocal && !currentIsLocal) {
+        absolute.protocol = window.location.protocol;
+        absolute.hostname = window.location.hostname;
+        absolute.port = window.location.port;
+      }
+      return absolute.toString();
+    }
+
     function toWebcal(url) {
       if (typeof url !== 'string') return url;
+      if (url.startsWith('webcal://')) return url;
       if (url.startsWith('https://')) return `webcal://${url.slice(8)}`;
       if (url.startsWith('http://')) return `webcal://${url.slice(7)}`;
       return url;
     }
 
+    const normalizedIcsFeedUrl = normalizeFeedURL(icsFeedUrl);
+    const webcalFeedUrl = toWebcal(normalizedIcsFeedUrl);
+    const googleCalendarSubscribeUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(normalizedIcsFeedUrl)}`;
+
     function subscribeTarget(platform) {
-      if (platform === 'ios' || platform === 'android') return toWebcal(icsFeedUrl);
-      return icsFeedUrl;
+      if (platform === 'ios') return webcalFeedUrl;
+      if (platform === 'android') return webcalFeedUrl;
+      return normalizedIcsFeedUrl;
+    }
+
+    function desktopSubscribeLinks() {
+      const encodedURL = encodeURIComponent(normalizedIcsFeedUrl);
+      return [
+        { label: 'Subscribe with Google Calendar', href: `https://calendar.google.com/calendar/r?cid=${encodedURL}` },
+        { label: 'Subscribe with Outlook.com', href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodedURL}` },
+        { label: 'Subscribe with Apple Calendar (webcal)', href: webcalFeedUrl },
+        { label: 'Download ICS file', href: normalizedIcsFeedUrl }
+      ];
     }
 
     function categoryCounts() {
@@ -302,7 +406,8 @@
     }
 
     function colorForCategory(category) {
-      return categoryColorMap.get(normalizeCategory(category)) || defaultCategoryColors.other;
+      const key = normalizeCategory(category);
+      return normalizedConfiguredCategoryColors[key] || categoryColorMap.get(key) || defaultCategoryColor;
     }
 
     function refreshLegendState(allButton) {
@@ -406,8 +511,8 @@
       const counts = categoryCounts();
       let paletteIndex = 0;
       categories.forEach((category) => {
-        if (defaultCategoryColors[category]) {
-          categoryColorMap.set(category, defaultCategoryColors[category]);
+        if (normalizedConfiguredCategoryColors[category]) {
+          categoryColorMap.set(category, normalizedConfiguredCategoryColors[category]);
         } else {
           categoryColorMap.set(category, palette[paletteIndex % palette.length]);
           paletteIndex += 1;
@@ -487,10 +592,56 @@
         subscribeButton.textContent = 'Subscribe on iPhone';
       } else if (platform === 'android') {
         subscribeButton.textContent = 'Subscribe on Android';
+      } else {
+        subscribeButton.textContent = 'Subscribe options';
       }
       subscribeButton.addEventListener('click', () => {
-        window.location.href = subscribeTarget(platform);
+        if (platform === 'ios' || !subscribeMenu) {
+          window.location.href = subscribeTarget(platform);
+          return;
+        }
+
+        if (platform === 'android') {
+          const target = subscribeTarget(platform);
+          if (target) {
+            window.location.href = target;
+          }
+          // If Android doesn't hand off the webcal intent, fall back to Google Calendar subscribe flow.
+          window.setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+              window.location.href = googleCalendarSubscribeUrl;
+            }
+          }, 900);
+          return;
+        }
+
+        const isHidden = subscribeMenu.hasAttribute('hidden');
+        if (isHidden) {
+          subscribeMenu.replaceChildren();
+          desktopSubscribeLinks().forEach((item) => {
+            const link = document.createElement('a');
+            link.href = item.href;
+            link.textContent = item.label;
+            link.target = '_blank';
+            link.rel = 'noreferrer';
+            subscribeMenu.appendChild(link);
+          });
+          subscribeMenu.removeAttribute('hidden');
+          subscribeButton.setAttribute('aria-expanded', 'true');
+        } else {
+          subscribeMenu.setAttribute('hidden', '');
+          subscribeButton.setAttribute('aria-expanded', 'false');
+        }
       });
+
+      if (subscribeMenu) {
+        document.addEventListener('click', (event) => {
+          if (subscribeMenu.hasAttribute('hidden')) return;
+          if (subscribeButton.contains(event.target) || subscribeMenu.contains(event.target)) return;
+          subscribeMenu.setAttribute('hidden', '');
+          subscribeButton.setAttribute('aria-expanded', 'false');
+        });
+      }
     }
 
     if (showPastToggle) {
