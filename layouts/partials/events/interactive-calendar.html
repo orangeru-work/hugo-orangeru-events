@@ -382,7 +382,7 @@
 
     function subscribeTarget(platform) {
       if (platform === 'ios') return webcalFeedUrl;
-      if (platform === 'android') return webcalFeedUrl;
+      if (platform === 'android') return googleCalendarSubscribeUrl;
       return normalizedIcsFeedUrl;
     }
 
@@ -596,22 +596,8 @@
         subscribeButton.textContent = 'Subscribe options';
       }
       subscribeButton.addEventListener('click', () => {
-        if (platform === 'ios' || !subscribeMenu) {
+        if (platform === 'ios' || platform === 'android' || !subscribeMenu) {
           window.location.href = subscribeTarget(platform);
-          return;
-        }
-
-        if (platform === 'android') {
-          const target = subscribeTarget(platform);
-          if (target) {
-            window.location.href = target;
-          }
-          // If Android doesn't hand off the webcal intent, fall back to Google Calendar subscribe flow.
-          window.setTimeout(() => {
-            if (document.visibilityState === 'visible') {
-              window.location.href = googleCalendarSubscribeUrl;
-            }
-          }, 900);
           return;
         }
 
