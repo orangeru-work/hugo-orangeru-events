@@ -395,16 +395,13 @@
     const normalizedIcsFeedUrl = normalizeFeedURL(icsFeedUrl);
     const webcalFeedUrl = toWebcal(normalizedIcsFeedUrl);
     const googleCalendarSubscribeUrl = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(normalizedIcsFeedUrl)}`;
-    const googleCalendarAddByURLPage = 'https://calendar.google.com/calendar/u/0/r/settings/addbyurl';
 
     function subscribeMenuItems() {
       const encodedURL = encodeURIComponent(normalizedIcsFeedUrl);
       return [
-        { label: 'Try adding in Google Calendar', href: `https://calendar.google.com/calendar/u/0/r?cid=${encodedURL}` },
-        { label: 'Open Google Calendar Add by URL', href: googleCalendarAddByURLPage },
+        { label: 'Google Calendar', href: `https://calendar.google.com/calendar/u/0/r?cid=${encodedURL}` },
         { label: 'Subscribe with Outlook.com', href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodedURL}` },
         { label: 'Subscribe with Apple Calendar (webcal)', href: webcalFeedUrl },
-        { label: 'Open ICS feed URL', href: normalizedIcsFeedUrl },
         { label: 'Copy ICS feed URL', action: 'copy' }
       ];
     }

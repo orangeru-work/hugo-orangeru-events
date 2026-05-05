@@ -70,7 +70,7 @@ Options:
 When subscribe is enabled:
 
 - It opens a subscribe options menu across platforms
-- The menu includes Google Calendar options (direct `cid` link and Add by URL page), Apple/webcal, Outlook.com, direct ICS URL, and copy-to-clipboard for the feed URL
+- The menu includes Google Calendar, Apple/webcal, Outlook.com, and copy-to-clipboard for the feed URL
 
 ## Default month-view display
 
