@@ -2,6 +2,8 @@ BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//hugo-orangeru-events//exampleSite//EN
 CALSCALE:GREGORIAN
+X-WR-CALNAME:OrangeRU Events Example
+X-WR-CALDESC:Example ICS feed for the hugo-orangeru-events module.
 BEGIN:VEVENT
 UID:example-sunrise-club-run@example.org
 DTSTAMP:20260419T000000Z
