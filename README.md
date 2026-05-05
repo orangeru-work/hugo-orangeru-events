@@ -69,9 +69,8 @@ Options:
 
 When subscribe is enabled:
 
-- On iPhone/iPad, it opens `webcal://...`
-- On Android, it opens Google Calendar subscribe flow with the same ICS feed URL
-- On desktop, it opens a subscribe menu (Google Calendar, Outlook.com, Apple Calendar/webcal, direct ICS download)
+- It opens a subscribe options menu across platforms
+- The menu includes Google Calendar options (direct `cid` link and Add by URL page), Apple/webcal, Outlook.com, direct ICS URL, and copy-to-clipboard for the feed URL
 
 ## Default month-view display
 

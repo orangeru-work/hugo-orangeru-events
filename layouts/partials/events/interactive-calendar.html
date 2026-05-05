@@ -180,8 +180,24 @@
     border-radius: .35rem;
     font-size: .86rem;
   }
+  .events-calendar-subscribe-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: #111827;
+    text-decoration: none;
+    padding: .45rem .5rem;
+    border-radius: .35rem;
+    font-size: .86rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
   .events-calendar-subscribe-menu a:hover,
-  .events-calendar-subscribe-menu a:focus-visible {
+  .events-calendar-subscribe-menu a:focus-visible,
+  .events-calendar-subscribe-menu button:hover,
+  .events-calendar-subscribe-menu button:focus-visible {
     background: #eff6ff;
     color: #1d4ed8;
   }
@@ -378,22 +394,27 @@
 
     const normalizedIcsFeedUrl = normalizeFeedURL(icsFeedUrl);
     const webcalFeedUrl = toWebcal(normalizedIcsFeedUrl);
-    const googleCalendarSubscribeUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(normalizedIcsFeedUrl)}`;
+    const googleCalendarSubscribeUrl = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(normalizedIcsFeedUrl)}`;
+    const googleCalendarAddByURLPage = 'https://calendar.google.com/calendar/u/0/r/settings/addbyurl';
 
-    function subscribeTarget(platform) {
-      if (platform === 'ios') return webcalFeedUrl;
-      if (platform === 'android') return googleCalendarSubscribeUrl;
-      return normalizedIcsFeedUrl;
-    }
-
-    function desktopSubscribeLinks() {
+    function subscribeMenuItems() {
       const encodedURL = encodeURIComponent(normalizedIcsFeedUrl);
       return [
-        { label: 'Subscribe with Google Calendar', href: `https://calendar.google.com/calendar/r?cid=${encodedURL}` },
+        { label: 'Try adding in Google Calendar', href: `https://calendar.google.com/calendar/u/0/r?cid=${encodedURL}` },
+        { label: 'Open Google Calendar Add by URL', href: googleCalendarAddByURLPage },
         { label: 'Subscribe with Outlook.com', href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodedURL}` },
         { label: 'Subscribe with Apple Calendar (webcal)', href: webcalFeedUrl },
-        { label: 'Download ICS file', href: normalizedIcsFeedUrl }
+        { label: 'Open ICS feed URL', href: normalizedIcsFeedUrl },
+        { label: 'Copy ICS feed URL', action: 'copy' }
       ];
+    }
+
+    async function copyFeedURL() {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(normalizedIcsFeedUrl);
+        return true;
+      }
+      return false;
     }
 
     function categoryCounts() {
@@ -588,23 +609,38 @@
 
     if (subscribeButton) {
       const platform = detectPlatform();
-      if (platform === 'ios') {
-        subscribeButton.textContent = 'Subscribe on iPhone';
-      } else if (platform === 'android') {
-        subscribeButton.textContent = 'Subscribe on Android';
-      } else {
-        subscribeButton.textContent = 'Subscribe options';
-      }
+      subscribeButton.textContent = 'Subscribe options';
+      const closeSubscribeMenu = () => {
+        if (!subscribeMenu) return;
+        subscribeMenu.setAttribute('hidden', '');
+        subscribeButton.setAttribute('aria-expanded', 'false');
+      };
+
       subscribeButton.addEventListener('click', () => {
-        if (platform === 'ios' || platform === 'android' || !subscribeMenu) {
-          window.location.href = subscribeTarget(platform);
+        if (!subscribeMenu) {
+          window.location.href = platform === 'ios' ? webcalFeedUrl : googleCalendarSubscribeUrl;
           return;
         }
 
         const isHidden = subscribeMenu.hasAttribute('hidden');
         if (isHidden) {
           subscribeMenu.replaceChildren();
-          desktopSubscribeLinks().forEach((item) => {
+          subscribeMenuItems().forEach((item) => {
+            if (item.action === 'copy') {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.textContent = item.label;
+              button.addEventListener('click', async () => {
+                const copied = await copyFeedURL();
+                if (!copied) {
+                  window.prompt('Copy calendar feed URL:', normalizedIcsFeedUrl);
+                }
+                closeSubscribeMenu();
+              });
+              subscribeMenu.appendChild(button);
+              return;
+            }
+
             const link = document.createElement('a');
             link.href = item.href;
             link.textContent = item.label;
@@ -615,8 +651,7 @@
           subscribeMenu.removeAttribute('hidden');
           subscribeButton.setAttribute('aria-expanded', 'true');
         } else {
-          subscribeMenu.setAttribute('hidden', '');
-          subscribeButton.setAttribute('aria-expanded', 'false');
+          closeSubscribeMenu();
         }
       });
 
@@ -624,8 +659,7 @@
         document.addEventListener('click', (event) => {
           if (subscribeMenu.hasAttribute('hidden')) return;
           if (subscribeButton.contains(event.target) || subscribeMenu.contains(event.target)) return;
-          subscribeMenu.setAttribute('hidden', '');
-          subscribeButton.setAttribute('aria-expanded', 'false');
+          closeSubscribeMenu();
         });
       }
     }
