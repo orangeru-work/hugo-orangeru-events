@@ -394,14 +394,14 @@
 
     const normalizedIcsFeedUrl = normalizeFeedURL(icsFeedUrl);
     const webcalFeedUrl = toWebcal(normalizedIcsFeedUrl);
-    const googleCalendarSubscribeUrl = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(normalizedIcsFeedUrl)}`;
+    const googleCalendarSubscribeUrl = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(webcalFeedUrl)}`;
 
     function subscribeMenuItems() {
       const encodedURL = encodeURIComponent(normalizedIcsFeedUrl);
       return [
-        { label: 'Google Calendar', href: `https://calendar.google.com/calendar/u/0/r?cid=${encodedURL}` },
-        { label: 'Subscribe with Outlook.com', href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodedURL}` },
-        { label: 'Subscribe with Apple Calendar (webcal)', href: webcalFeedUrl },
+        { label: 'Google Calendar', href: googleCalendarSubscribeUrl, openInNewWindow: false },
+        { label: 'Subscribe with Outlook.com', href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodedURL}`, openInNewWindow: true },
+        { label: 'Subscribe with Apple Calendar (webcal)', href: webcalFeedUrl, openInNewWindow: true },
         { label: 'Copy ICS feed URL', action: 'copy' }
       ];
     }
@@ -641,8 +641,10 @@
             const link = document.createElement('a');
             link.href = item.href;
             link.textContent = item.label;
-            link.target = '_blank';
-            link.rel = 'noreferrer';
+            if (item.openInNewWindow !== false) {
+              link.target = '_blank';
+              link.rel = 'noreferrer';
+            }
             subscribeMenu.appendChild(link);
           });
           subscribeMenu.removeAttribute('hidden');
