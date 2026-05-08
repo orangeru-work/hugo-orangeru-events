@@ -71,6 +71,7 @@ When subscribe is enabled:
 
 - It opens a subscribe options menu across platforms
 - The menu includes Google Calendar, Apple/webcal, Outlook.com, and copy-to-clipboard for the feed URL
+- Google Calendar uses a URL-encoded `webcal://` feed in `cid` for compatibility across clients
 
 ## Default month-view display
 
