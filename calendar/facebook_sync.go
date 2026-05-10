@@ -228,6 +228,10 @@ func parseEvents(cfg SyncConfig) ([]event, error) {
 
 		summaryExpr := regexp.MustCompile(`^([^A-z0-9]*)(.*)`)
 		summary := summaryExpr.ReplaceAllString(e.Summary, "$2")
+		partStat := resolvePartStat(e)
+		if strings.EqualFold(strings.TrimSpace(partStat), "DECLINED") {
+			continue
+		}
 
 		events = append(events, event{
 			URI:            e.URL,
@@ -239,7 +243,7 @@ func parseEvents(cfg SyncConfig) ([]event, error) {
 			Location:       e.Location,
 			UID:            uid,
 			Created:        e.Created.Format("2006-01-02T15:04:00Z"),
-			Category:       categoryForPartStat(resolvePartStat(e), cfg),
+			Category:       categoryForPartStat(partStat, cfg),
 		})
 	}
 

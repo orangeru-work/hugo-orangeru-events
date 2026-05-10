@@ -10,11 +10,12 @@ From a user point of view, the sync does this:
 1. Downloads your Facebook ICS feed.
 2. Generates/updates markdown files in your events content directory.
 3. Applies category mapping for going/interested/default responses.
-4. Writes event-specific values under an `event:` front matter block.
-5. Converts supported GPS coordinate text to Google Maps links.
-6. Leaves feature images unset (no generated `feature-img` field).
-7. Removes previously generated files before writing fresh output.
-8. (exampleSite workflow only) deletes generated events older than 30 days.
+4. Skips events marked `PARTSTAT:DECLINED`.
+5. Writes event-specific values under an `event:` front matter block.
+6. Converts supported GPS coordinate text to Google Maps links.
+7. Leaves feature images unset (no generated `feature-img` field).
+8. Removes previously generated files before writing fresh output.
+9. (exampleSite workflow only) deletes generated events older than 30 days.
 
 The module expects event metadata in the `event` block (for example,
 `event.startdate`, `event.category`, `event.location`).
@@ -76,7 +77,7 @@ go run ./cmd/facebook-events \
 
 - `--category-going`: maps `PARTSTAT:ACCEPTED`
 - `--category-interested`: maps `PARTSTAT:TENTATIVE`
-- `--category-default`: fallback for other statuses
+- `--category-default`: fallback for non-declined statuses not matched above
 - `--include-private`: include `CLASS:PRIVATE` events when set to true
 - `--exclude-organizer`: repeatable organizer exclusion filter
 - `--cancelled`: optional file of event IDs to suppress

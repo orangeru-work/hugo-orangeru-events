@@ -106,6 +106,7 @@ func TestSyncFacebookEvents(t *testing.T) {
 	assertExists(t, filepath.Join(outputDir, "e-going.md"))
 	assertExists(t, filepath.Join(outputDir, "e-attendee-going.md"))
 	assertNotExists(t, filepath.Join(outputDir, "e-interested.md"))
+	assertNotExists(t, filepath.Join(outputDir, "e-declined.md"))
 	assertNotExists(t, filepath.Join(outputDir, "e-private.md"))
 
 	content, err := os.ReadFile(filepath.Join(outputDir, "e-going.md"))
@@ -158,6 +159,7 @@ func TestSyncFacebookEventsIncludePrivate(t *testing.T) {
 	}
 
 	assertExists(t, filepath.Join(outputDir, "e-private.md"))
+	assertNotExists(t, filepath.Join(outputDir, "e-declined.md"))
 	content, err := os.ReadFile(filepath.Join(outputDir, "e-private.md"))
 	if err != nil {
 		t.Fatalf("read private event: %v", err)
@@ -178,6 +180,8 @@ func facebookFixture(base time.Time) string {
 	attendeeEnd := base.Add(73 * time.Hour).Format("20060102T150405Z")
 	privateStart := base.Add(96 * time.Hour).Format("20060102T150405Z")
 	privateEnd := base.Add(97 * time.Hour).Format("20060102T150405Z")
+	declinedStart := base.Add(120 * time.Hour).Format("20060102T150405Z")
+	declinedEnd := base.Add(121 * time.Hour).Format("20060102T150405Z")
 
 	// The shape intentionally mirrors Facebook ICS fields, folding, and escaping.
 	return fmt.Sprintf(`BEGIN:VCALENDAR
@@ -261,8 +265,25 @@ CLASS:PRIVATE
 STATUS:CONFIRMED
 PARTSTAT:ACCEPTED
 END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:%[1]s
+LAST-MODIFIED:%[1]s
+CREATED:%[1]s
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:%[10]s
+DTEND:%[11]s
+UID:e-declined@facebook.com
+SUMMARY:Declined Event
+LOCATION:Declined\, Prescott\, AZ
+URL:https://www.facebook.com/events/9999/?event_time_id=1111
+DESCRIPTION:Should be skipped because the user declined
+CLASS:PUBLIC
+STATUS:CONFIRMED
+PARTSTAT:DECLINED
+END:VEVENT
 END:VCALENDAR
-`, created, goingStart, goingEnd, interestedStart, interestedEnd, attendeeStart, attendeeEnd, privateStart, privateEnd)
+`, created, goingStart, goingEnd, interestedStart, interestedEnd, attendeeStart, attendeeEnd, privateStart, privateEnd, declinedStart, declinedEnd)
 }
 
 func writeFile(t *testing.T, path, content string) {
