@@ -24,57 +24,57 @@
 {{- $pages := .Pages -}}
 {{- $events := slice -}}
 {{- range $pages -}}
-  {{- $eventParams := .Params -}}
-  {{- with .Params.event -}}
-    {{- $eventParams = merge $eventParams . -}}
-  {{- end -}}
-  {{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
-  {{- if $startRaw -}}
-    {{- $start := time.AsTime $startRaw -}}
-    {{- $endRaw := or $eventParams.enddate $eventParams.endDate -}}
-    {{- $end := "" -}}
-    {{- if $endRaw -}}
-      {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
-    {{- end -}}
+  {{- $page := . -}}
+  {{- with $page.Params.event -}}
+    {{- $eventParams := . -}}
+    {{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
+    {{- if $startRaw -}}
+      {{- $start := time.AsTime $startRaw -}}
+      {{- $endRaw := or $eventParams.enddate $eventParams.endDate -}}
+      {{- $end := "" -}}
+      {{- if $endRaw -}}
+        {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
+      {{- end -}}
 
-    {{- $externalURL := (or $eventParams.external_url "") -}}
-    {{- $description := .Summary | plainify -}}
-    {{- $descriptionHTML := ($description | markdownify) -}}
-    {{- with (or $eventParams.calendar_description $eventParams.ics_description $eventParams.ICSDescription) -}}
-      {{- $description = replaceRE "\\r?\\n[ \t]" "" . -}}
-      {{- $description = replaceRE "\\r" "" $description -}}
-      {{- $descriptionHTML = ($description | markdownify) -}}
-    {{- end -}}
-    {{- if $externalURL -}}
-      {{- $description = replace $description $externalURL "" -}}
-      {{- $description = replaceRE "\\n{3,}" "\n\n" $description -}}
-      {{- $description = trim $description " \n\r\t" -}}
-      {{- $descriptionHTML = ($description | markdownify) -}}
-    {{- end -}}
+      {{- $externalURL := (or $eventParams.external_url "") -}}
+      {{- $description := $page.Summary | plainify -}}
+      {{- $descriptionHTML := ($description | markdownify) -}}
+      {{- with (or $eventParams.calendar_description $eventParams.ics_description $eventParams.ICSDescription) -}}
+        {{- $description = replaceRE "\\r?\\n[ \t]" "" . -}}
+        {{- $description = replaceRE "\\r" "" $description -}}
+        {{- $descriptionHTML = ($description | markdownify) -}}
+      {{- end -}}
+      {{- if $externalURL -}}
+        {{- $description = replace $description $externalURL "" -}}
+        {{- $description = replaceRE "\\n{3,}" "\n\n" $description -}}
+        {{- $description = trim $description " \n\r\t" -}}
+        {{- $descriptionHTML = ($description | markdownify) -}}
+      {{- end -}}
 
-    {{- $category := "other" -}}
-    {{- if isset $eventParams "category" -}}
-      {{- $category = lower (printf "%v" $eventParams.category) -}}
-    {{- else if isset $eventParams "event_type" -}}
-      {{- $category = lower (printf "%v" $eventParams.event_type) -}}
-    {{- end -}}
-    {{- $category = replaceRE "[^a-z0-9_-]+" "-" $category -}}
+      {{- $category := "other" -}}
+      {{- if isset $eventParams "category" -}}
+        {{- $category = lower (printf "%v" $eventParams.category) -}}
+      {{- else if isset $eventParams "event_type" -}}
+        {{- $category = lower (printf "%v" $eventParams.event_type) -}}
+      {{- end -}}
+      {{- $category = replaceRE "[^a-z0-9_-]+" "-" $category -}}
 
-    {{- $event := dict
-      "title" .Title
-      "start" ($start.Format "2006-01-02T15:04:05Z07:00")
-      "end" $end
-      "url" .Permalink
-      "extendedProps" (dict
-        "location" (or $eventParams.location "")
-        "category" $category
-        "externalURL" $externalURL
-        "rsvpURL" (or $eventParams.rsvp "")
-        "description" $description
-        "descriptionHTML" (printf "%s" $descriptionHTML)
-      )
-    -}}
-    {{- $events = $events | append $event -}}
+      {{- $event := dict
+        "title" $page.Title
+        "start" ($start.Format "2006-01-02T15:04:05Z07:00")
+        "end" $end
+        "url" $page.Permalink
+        "extendedProps" (dict
+          "location" (or $eventParams.location "")
+          "category" $category
+          "externalURL" $externalURL
+          "rsvpURL" (or $eventParams.rsvp "")
+          "description" $description
+          "descriptionHTML" (printf "%s" $descriptionHTML)
+        )
+      -}}
+      {{- $events = $events | append $event -}}
+    {{- end -}}
   {{- end -}}
 {{- end -}}
 
@@ -299,19 +299,18 @@
   <h3>Upcoming Events</h3>
   <ul class="events-calendar-noscript-list">
     {{- range first 25 .Pages.ByDate -}}
-      {{- $eventParams := .Params -}}
-      {{- with .Params.event -}}
-        {{- $eventParams = merge $eventParams . -}}
-      {{- end -}}
-      {{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
-      {{- if $startRaw -}}
-        {{- $start := time.AsTime $startRaw -}}
-        {{- $minus1d := time.ParseDuration "-24h" -}}
-        {{- if ($start.After (time.Now.Add $minus1d)) -}}
-          <li>
-            <a href="{{ .Permalink }}">{{ .Title }}</a>
-            <time class="events-calendar-noscript-time">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
-          </li>
+      {{- $page := . -}}
+      {{- with $page.Params.event -}}
+        {{- $startRaw := or .startdate .startDate -}}
+        {{- if $startRaw -}}
+          {{- $start := time.AsTime $startRaw -}}
+          {{- $minus1d := time.ParseDuration "-24h" -}}
+          {{- if ($start.After (time.Now.Add $minus1d)) -}}
+            <li>
+              <a href="{{ $page.Permalink }}">{{ $page.Title }}</a>
+              <time class="events-calendar-noscript-time">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
+            </li>
+          {{- end -}}
         {{- end -}}
       {{- end -}}
     {{- end -}}

@@ -11,9 +11,13 @@ From a user point of view, the sync does this:
 2. Generates/updates markdown files in your events content directory.
 3. Applies category mapping for going/interested/default responses.
 4. Writes event-specific values under an `event:` front matter block.
-5. Leaves feature images unset (no generated `feature-img` field).
-6. Removes previously generated files before writing fresh output.
-7. (exampleSite workflow only) deletes generated events older than 30 days.
+5. Converts supported GPS coordinate text to Google Maps links.
+6. Leaves feature images unset (no generated `feature-img` field).
+7. Removes previously generated files before writing fresh output.
+8. (exampleSite workflow only) deletes generated events older than 30 days.
+
+The module expects event metadata in the `event` block (for example,
+`event.startdate`, `event.category`, `event.location`).
 
 ## 1. Get your Facebook ICS feed URL
 
@@ -76,3 +80,21 @@ go run ./cmd/facebook-events \
 - `--include-private`: include `CLASS:PRIVATE` events when set to true
 - `--exclude-organizer`: repeatable organizer exclusion filter
 - `--cancelled`: optional file of event IDs to suppress
+
+## GPS coordinate handling
+
+The sync normalizes common coordinate formats found in Facebook descriptions and
+turns them into Google Maps links.
+
+Supported patterns:
+
+- `34.545° N, 112.468° W`
+- `34.545, -112.468`
+
+Behavior:
+
+- In generated body content, coordinates are converted to clickable markdown
+  links.
+- In `event.ics_description`, coordinates are preserved as plain text plus a
+  Google Maps URL.
+- `event.location` is copied from the ICS feed as-is.

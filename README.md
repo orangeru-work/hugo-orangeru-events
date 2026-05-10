@@ -30,15 +30,15 @@ module:
 
 Want your events page to stay fresh without hand-editing markdown?  
 This module includes a Facebook ICS sync flow that can generate event pages,
-apply sensible category mapping, and run on a schedule when you decide to turn
-it on.
+apply sensible category mapping, auto-link supported GPS coordinates, and run on
+a schedule when you decide to turn it on.
 
 For setup, secrets, feed URL instructions, and workflow options, see:
 **[Facebook event sync guide](docs/facebook-sync.md)**.
 
 ## Supported front matter
 
-Preferred (contained under `event`):
+Contained under `event`:
 
 - `event.startdate` (required)
 - `event.enddate`
@@ -48,17 +48,6 @@ Preferred (contained under `event`):
 - `event.external_url`
 - `event.rsvp`
 - `event.calendar_description` / `event.ics_description`
-
-Also supported for backward compatibility (top-level):
-
-- `startdate` or `startDate`
-- `enddate` or `endDate`
-- `category`
-- `event_type` (legacy string fallback)
-- `location`
-- `external_url`
-- `rsvp`
-- `calendar_description` or `ics_description` (`ICSDescription` also supported as legacy fallback)
 
 If `category` is missing, it defaults to `other`.
 

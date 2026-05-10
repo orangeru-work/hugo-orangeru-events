@@ -1,5 +1,6 @@
 +++
 title = "Demo Event Beta"
+[event]
 startDate = "2026-05-28T18:30:00-07:00"
 endDate = "2026-05-28T20:00:00-07:00"
 location = "Example Venue B"
