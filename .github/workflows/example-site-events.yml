@@ -3,7 +3,7 @@ name: example-site-facebook-events
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 14 * * *" # daily around 7am America/Phoenix (UTC-7)
+    - cron: "17 14 * * 0" # weekly Sunday around 7am America/Phoenix (UTC-7)
 
 permissions:
   contents: write

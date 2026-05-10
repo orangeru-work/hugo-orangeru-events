@@ -42,6 +42,7 @@ is preferred.
 Use `.github/workflows/example-site-events.yml` in this repo.
 
 - Trigger: manual (`workflow_dispatch`) and daily schedule
+- Trigger: manual (`workflow_dispatch`) and weekly schedule
 - Output: `exampleSite/content/events`
 - Pruning: removes generated events older than 30 days
 
