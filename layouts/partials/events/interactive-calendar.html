@@ -24,19 +24,23 @@
 {{- $pages := .Pages -}}
 {{- $events := slice -}}
 {{- range $pages -}}
-  {{- $startRaw := or .Params.startdate .Params.startDate -}}
+  {{- $eventParams := .Params -}}
+  {{- with .Params.event -}}
+    {{- $eventParams = merge $eventParams . -}}
+  {{- end -}}
+  {{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
   {{- if $startRaw -}}
     {{- $start := time.AsTime $startRaw -}}
-    {{- $endRaw := or .Params.enddate .Params.endDate -}}
+    {{- $endRaw := or $eventParams.enddate $eventParams.endDate -}}
     {{- $end := "" -}}
     {{- if $endRaw -}}
       {{- $end = (time.AsTime $endRaw).Format "2006-01-02T15:04:05Z07:00" -}}
     {{- end -}}
 
-    {{- $externalURL := (or .Params.external_url "") -}}
+    {{- $externalURL := (or $eventParams.external_url "") -}}
     {{- $description := .Summary | plainify -}}
     {{- $descriptionHTML := ($description | markdownify) -}}
-    {{- with (or .Params.calendar_description .Params.ics_description .Params.ICSDescription) -}}
+    {{- with (or $eventParams.calendar_description $eventParams.ics_description $eventParams.ICSDescription) -}}
       {{- $description = replaceRE "\\r?\\n[ \t]" "" . -}}
       {{- $description = replaceRE "\\r" "" $description -}}
       {{- $descriptionHTML = ($description | markdownify) -}}
@@ -49,10 +53,10 @@
     {{- end -}}
 
     {{- $category := "other" -}}
-    {{- if isset .Params "category" -}}
-      {{- $category = lower (printf "%v" .Params.category) -}}
-    {{- else if isset .Params "event_type" -}}
-      {{- $category = lower (printf "%v" .Params.event_type) -}}
+    {{- if isset $eventParams "category" -}}
+      {{- $category = lower (printf "%v" $eventParams.category) -}}
+    {{- else if isset $eventParams "event_type" -}}
+      {{- $category = lower (printf "%v" $eventParams.event_type) -}}
     {{- end -}}
     {{- $category = replaceRE "[^a-z0-9_-]+" "-" $category -}}
 
@@ -62,10 +66,10 @@
       "end" $end
       "url" .Permalink
       "extendedProps" (dict
-        "location" (or .Params.location "")
+        "location" (or $eventParams.location "")
         "category" $category
         "externalURL" $externalURL
-        "rsvpURL" (or .Params.rsvp "")
+        "rsvpURL" (or $eventParams.rsvp "")
         "description" $description
         "descriptionHTML" (printf "%s" $descriptionHTML)
       )
@@ -295,7 +299,11 @@
   <h3>Upcoming Events</h3>
   <ul class="events-calendar-noscript-list">
     {{- range first 25 .Pages.ByDate -}}
-      {{- $startRaw := or .Params.startdate .Params.startDate -}}
+      {{- $eventParams := .Params -}}
+      {{- with .Params.event -}}
+        {{- $eventParams = merge $eventParams . -}}
+      {{- end -}}
+      {{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
       {{- if $startRaw -}}
         {{- $start := time.AsTime $startRaw -}}
         {{- $minus1d := time.ParseDuration "-24h" -}}

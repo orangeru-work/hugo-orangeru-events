@@ -15,18 +15,18 @@ import (
 const outputFmt = `---
 title: "%v"
 date: %v
-startdate: %v
-enddate: %v
-category: %v
-external_url: %v
 layout: %v
-location: %v
-feature-img: "assets/img/big-trail.jpg"
 outputs:
   - html
   - calendar
-ICSDescription: |+2
-  %s
+event:
+  startdate: %v
+  enddate: %v
+  category: %v
+  external_url: %v
+  location: %v
+  ics_description: |-
+%s
 ---
 
 %v
@@ -107,13 +107,13 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 		if _, err := f.Write([]byte(fmt.Sprintf(outputFmt,
 			e.Summary,
 			e.Created,
+			"post",
 			e.Start,
 			e.End,
 			e.Category,
 			e.URI,
-			"post",
 			e.Location,
-			e.ICSDescription,
+			indentMultiline(e.ICSDescription, "    "),
 			e.Description,
 		))); err != nil {
 			_ = f.Close()
@@ -209,7 +209,7 @@ func parseEvents(cfg SyncConfig) ([]event, error) {
 			continue
 		}
 
-		icsDescription := strings.ReplaceAll(e.Description, "\\n", "\n  ")
+		icsDescription := strings.ReplaceAll(e.Description, "\\n", "\n")
 		description := strings.ReplaceAll(e.Description, "\\n", "<br>\n  ")
 		description = strings.ReplaceAll(description, e.URL, "")
 		description = strings.ReplaceAll(description, ":", "&#58;")
@@ -286,4 +286,12 @@ func resolvePartStat(e gocal.Event) string {
 	}
 
 	return ""
+}
+
+func indentMultiline(input, indent string) string {
+	lines := strings.Split(input, "\n")
+	for i, line := range lines {
+		lines[i] = indent + line
+	}
+	return strings.Join(lines, "\n")
 }

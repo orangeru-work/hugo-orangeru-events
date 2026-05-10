@@ -113,11 +113,17 @@ func TestSyncFacebookEvents(t *testing.T) {
 		t.Fatalf("read generated file: %v", err)
 	}
 	text := string(content)
+	if !strings.Contains(text, "\nevent:\n") {
+		t.Fatalf("generated file should use contained event front matter")
+	}
 	if !strings.Contains(text, `category: going-cat`) {
 		t.Fatalf("generated file missing configured going category")
 	}
 	if !strings.Contains(text, `title: "Going Event"`) {
 		t.Fatalf("generated file missing cleaned title")
+	}
+	if strings.Contains(text, `feature-img:`) {
+		t.Fatalf("generated file should not set feature-img")
 	}
 
 	attendeeContent, err := os.ReadFile(filepath.Join(outputDir, "e-attendee-going.md"))

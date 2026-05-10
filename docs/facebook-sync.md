@@ -10,8 +10,10 @@ From a user point of view, the sync does this:
 1. Downloads your Facebook ICS feed.
 2. Generates/updates markdown files in your events content directory.
 3. Applies category mapping for going/interested/default responses.
-4. Removes previously generated files before writing fresh output.
-5. (exampleSite workflow only) deletes generated events older than 30 days.
+4. Writes event-specific values under an `event:` front matter block.
+5. Leaves feature images unset (no generated `feature-img` field).
+6. Removes previously generated files before writing fresh output.
+7. (exampleSite workflow only) deletes generated events older than 30 days.
 
 ## 1. Get your Facebook ICS feed URL
 
@@ -41,7 +43,6 @@ is preferred.
 
 Use `.github/workflows/example-site-events.yml` in this repo.
 
-- Trigger: manual (`workflow_dispatch`) and daily schedule
 - Trigger: manual (`workflow_dispatch`) and weekly schedule
 - Output: `exampleSite/content/events`
 - Pruning: removes generated events older than 30 days

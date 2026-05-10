@@ -38,14 +38,22 @@ For setup, secrets, feed URL instructions, and workflow options, see:
 
 ## Supported front matter
 
-Required:
+Preferred (contained under `event`):
+
+- `event.startdate` (required)
+- `event.enddate`
+- `event.category`
+- `event.event_type` (legacy fallback when category is missing)
+- `event.location`
+- `event.external_url`
+- `event.rsvp`
+- `event.calendar_description` / `event.ics_description`
+
+Also supported for backward compatibility (top-level):
 
 - `startdate` or `startDate`
-
-Optional:
-
 - `enddate` or `endDate`
-- `category` (preferred)
+- `category`
 - `event_type` (legacy string fallback)
 - `location`
 - `external_url`
