@@ -86,60 +86,16 @@ func TestSyncFacebookEvents(t *testing.T) {
 	writeFile(t, cancelledPath, "e-interested@facebook.com\n")
 
 	icsPath := filepath.Join(dir, "events.ics")
-	now := time.Now().UTC()
-	goingStart := now.Add(24 * time.Hour)
-	interestedStart := now.Add(48 * time.Hour)
-	excludedStart := now.Add(72 * time.Hour)
-	writeFile(t, icsPath, buildICS([]icsEvent{
-		{
-			UID:         "e-going@facebook.com",
-			Summary:     "! Going Event",
-			Organizer:   "Trail Club",
-			PartStat:    "ACCEPTED",
-			Start:       goingStart,
-			End:         goingStart.Add(90 * time.Minute),
-			Created:     now,
-			URL:         "https://example.org/going",
-			Location:    "Trailhead",
-			Description: "Bring water",
-		},
-		{
-			UID:         "e-interested@facebook.com",
-			Summary:     "* Interested Event",
-			Organizer:   "Trail Club",
-			PartStat:    "TENTATIVE",
-			Start:       interestedStart,
-			End:         interestedStart.Add(90 * time.Minute),
-			Created:     now,
-			URL:         "https://example.org/interested",
-			Location:    "Park",
-			Description: "Bring snacks",
-		},
-		{
-			UID:         "e-excluded@facebook.com",
-			Summary:     "Excluded Event",
-			Organizer:   "Skip Org",
-			PartStat:    "ACCEPTED",
-			Start:       excludedStart,
-			End:         excludedStart.Add(90 * time.Minute),
-			Created:     now,
-			URL:         "https://example.org/excluded",
-			Location:    "Downtown",
-			Description: "Skip me",
-		},
-	}))
+	writeFile(t, icsPath, facebookFixture(time.Now().UTC()))
 
 	err := SyncFacebookEvents(SyncConfig{
 		ICSPath:             icsPath,
 		OutputDir:           outputDir,
 		CancelledEventsPath: cancelledPath,
 		CleanupPrefix:       "e-",
-		ExcludedOrganizers: map[string]struct{}{
-			"Skip Org": {},
-		},
-		GoingCategory:      "going-cat",
-		InterestedCategory: "interested-cat",
-		DefaultCategory:    "default-cat",
+		GoingCategory:       "going-cat",
+		InterestedCategory:  "interested-cat",
+		DefaultCategory:     "default-cat",
 	})
 	if err != nil {
 		t.Fatalf("sync facebook events: %v", err)
@@ -148,8 +104,9 @@ func TestSyncFacebookEvents(t *testing.T) {
 	assertNotExists(t, filepath.Join(outputDir, "e-stale.md"))
 	assertExists(t, filepath.Join(outputDir, "manual.md"))
 	assertExists(t, filepath.Join(outputDir, "e-going.md"))
+	assertExists(t, filepath.Join(outputDir, "e-attendee-going.md"))
 	assertNotExists(t, filepath.Join(outputDir, "e-interested.md"))
-	assertNotExists(t, filepath.Join(outputDir, "e-excluded.md"))
+	assertNotExists(t, filepath.Join(outputDir, "e-private.md"))
 
 	content, err := os.ReadFile(filepath.Join(outputDir, "e-going.md"))
 	if err != nil {
@@ -162,45 +119,112 @@ func TestSyncFacebookEvents(t *testing.T) {
 	if !strings.Contains(text, `title: "Going Event"`) {
 		t.Fatalf("generated file missing cleaned title")
 	}
-}
 
-type icsEvent struct {
-	UID         string
-	Summary     string
-	Description string
-	URL         string
-	Start       time.Time
-	End         time.Time
-	Created     time.Time
-	Location    string
-	Organizer   string
-	PartStat    string
-}
-
-func buildICS(events []icsEvent) string {
-	var b strings.Builder
-	b.WriteString("BEGIN:VCALENDAR\n")
-	b.WriteString("VERSION:2.0\n")
-	b.WriteString("PRODID:-//hugo-orangeru-events//tests//EN\n")
-	for _, e := range events {
-		b.WriteString("BEGIN:VEVENT\n")
-		b.WriteString(fmt.Sprintf("UID:%s\n", e.UID))
-		b.WriteString("CLASS:PUBLIC\n")
-		b.WriteString(fmt.Sprintf("SUMMARY:%s\n", e.Summary))
-		b.WriteString(fmt.Sprintf("DESCRIPTION:%s\n", e.Description))
-		b.WriteString(fmt.Sprintf("URL:%s\n", e.URL))
-		b.WriteString(fmt.Sprintf("DTSTART:%s\n", e.Start.UTC().Format("20060102T150405Z")))
-		b.WriteString(fmt.Sprintf("DTEND:%s\n", e.End.UTC().Format("20060102T150405Z")))
-		b.WriteString(fmt.Sprintf("DTSTAMP:%s\n", e.Created.UTC().Format("20060102T150405Z")))
-		b.WriteString(fmt.Sprintf("CREATED:%s\n", e.Created.UTC().Format("20060102T150405Z")))
-		b.WriteString(fmt.Sprintf("LAST-MODIFIED:%s\n", e.Created.UTC().Format("20060102T150405Z")))
-		b.WriteString(fmt.Sprintf("LOCATION:%s\n", e.Location))
-		b.WriteString(fmt.Sprintf("ORGANIZER;CN=%s:mailto:test@example.com\n", e.Organizer))
-		b.WriteString(fmt.Sprintf("ATTENDEE;PARTSTAT=%s:mailto:member@example.com\n", e.PartStat))
-		b.WriteString("END:VEVENT\n")
+	attendeeContent, err := os.ReadFile(filepath.Join(outputDir, "e-attendee-going.md"))
+	if err != nil {
+		t.Fatalf("read attendee-status file: %v", err)
 	}
-	b.WriteString("END:VCALENDAR\n")
-	return b.String()
+	if !strings.Contains(string(attendeeContent), `category: going-cat`) {
+		t.Fatalf("attendee-derived status should map to going category")
+	}
+}
+
+func facebookFixture(base time.Time) string {
+	created := base.Format("20060102T150405Z")
+
+	goingStart := base.Add(24 * time.Hour).Format("20060102T150405Z")
+	goingEnd := base.Add(25 * time.Hour).Format("20060102T150405Z")
+	interestedStart := base.Add(48 * time.Hour).Format("20060102T150405Z")
+	interestedEnd := base.Add(49 * time.Hour).Format("20060102T150405Z")
+	attendeeStart := base.Add(72 * time.Hour).Format("20060102T150405Z")
+	attendeeEnd := base.Add(73 * time.Hour).Format("20060102T150405Z")
+	privateStart := base.Add(96 * time.Hour).Format("20060102T150405Z")
+	privateEnd := base.Add(97 * time.Hour).Format("20060102T150405Z")
+
+	// The shape intentionally mirrors Facebook ICS fields, folding, and escaping.
+	return fmt.Sprintf(`BEGIN:VCALENDAR
+PRODID:-//Facebook//NONSGML Facebook Events V1.0//EN
+X-WR-CALNAME:Fixture Facebook Events
+X-PUBLISHED-TTL:PT12H
+X-ORIGINAL-URL:/events/
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+DTSTAMP:%[1]s
+LAST-MODIFIED:%[1]s
+CREATED:%[1]s
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:%[2]s
+DTEND:%[3]s
+UID:e-going@facebook.com
+SUMMARY:! Going Event
+LOCATION:3181 Willow Creek Rd\, Prescott\, AZ
+  86301-6848\, United States
+URL:https://www.facebook.com/events/1111/?event_time_id=2222
+DESCRIPTION:Join us for a 5k at the Jan Alfano
+  parkrun each Saturday morning! We
+  start at 7:30am.\n\nhttps://www.fac
+ ebook.com/events/1111/?event_time_
+ id=2222
+CLASS:PUBLIC
+STATUS:CONFIRMED
+PARTSTAT:ACCEPTED
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:%[1]s
+LAST-MODIFIED:%[1]s
+CREATED:%[1]s
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:%[4]s
+DTEND:%[5]s
+UID:e-interested@facebook.com
+SUMMARY:* Interested Event
+LOCATION:City Park\, Prescott\, AZ
+URL:https://www.facebook.com/events/3333/?event_time_id=4444
+DESCRIPTION:Bring snacks and water
+CLASS:PUBLIC
+STATUS:CONFIRMED
+PARTSTAT:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:%[1]s
+LAST-MODIFIED:%[1]s
+CREATED:%[1]s
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:%[6]s
+DTEND:%[7]s
+UID:e-attendee-going@facebook.com
+SUMMARY:Attendee Status Event
+LOCATION:Trailhead\, Prescott\, AZ
+URL:https://www.facebook.com/events/5555/?event_time_id=6666
+DESCRIPTION:Status only from attendee
+CLASS:PUBLIC
+STATUS:CONFIRMED
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Fixture User:MAILTO:fixture@example.com
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:%[1]s
+LAST-MODIFIED:%[1]s
+CREATED:%[1]s
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:%[8]s
+DTEND:%[9]s
+UID:e-private@facebook.com
+SUMMARY:Private Event
+LOCATION:Private\, Prescott\, AZ
+URL:https://www.facebook.com/events/7777/?event_time_id=8888
+DESCRIPTION:Should be skipped because it is private
+CLASS:PRIVATE
+STATUS:CONFIRMED
+PARTSTAT:ACCEPTED
+END:VEVENT
+END:VCALENDAR
+`, created, goingStart, goingEnd, interestedStart, interestedEnd, attendeeStart, attendeeEnd, privateStart, privateEnd)
 }
 
 func writeFile(t *testing.T, path, content string) {
