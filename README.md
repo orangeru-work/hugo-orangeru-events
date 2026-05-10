@@ -26,6 +26,41 @@ module:
 {{ partial "events/interactive-calendar.html" . }}
 ```
 
+## Facebook ICS event generation (optional)
+
+This module now includes an optional CLI for generating Hugo event content from a
+Facebook ICS feed:
+
+```bash
+go run ./cmd/facebook-events \
+  --ics /tmp/events.ics \
+  --output site/content/events \
+  --cancelled cancelled-events.txt \
+  --category-going club \
+  --category-interested other \
+  --category-default other
+```
+
+Category mapping is configurable:
+
+- `--category-going` maps GOING (`PARTSTAT:ACCEPTED`)
+- `--category-interested` maps INTERESTED (`PARTSTAT:TENTATIVE`)
+- `--category-default` maps all other statuses
+
+You can also exclude organizer names with repeatable
+`--exclude-organizer "<name>"`.
+
+### GitHub Actions template (manual by default)
+
+To avoid automatic runs by default, the workflow is provided as a **template**
+at:
+
+`contrib/workflows/facebook-events-sync.yml`
+
+Copy it into your consuming site's `.github/workflows/` directory to use it.
+It is `workflow_dispatch` only out of the box. Uncomment `push`/`schedule` in
+the copied workflow when you want automatic syncing.
+
 ## Supported front matter
 
 Required:
