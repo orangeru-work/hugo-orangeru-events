@@ -28,44 +28,13 @@ module:
 
 ## Facebook ICS event generation (optional)
 
-This module now includes an optional CLI for generating Hugo event content from a
-Facebook ICS feed:
+Want your events page to stay fresh without hand-editing markdown?  
+This module includes a Facebook ICS sync flow that can generate event pages,
+apply sensible category mapping, and run on a schedule when you decide to turn
+it on.
 
-```bash
-go run ./cmd/facebook-events \
-  --ics /tmp/events.ics \
-  --output site/content/events \
-  --cancelled cancelled-events.txt \
-  --include-private=false \
-  --category-going club \
-  --category-interested other \
-  --category-default other
-```
-
-Category mapping is configurable:
-
-- `--category-going` maps GOING (`PARTSTAT:ACCEPTED`)
-- `--category-interested` maps INTERESTED (`PARTSTAT:TENTATIVE`)
-- `--category-default` maps all other statuses
-
-You can also exclude organizer names with repeatable
-`--exclude-organizer "<name>"`.
-
-Private event filtering is configurable:
-
-- By default, `CLASS:PRIVATE` events are filtered out
-- Set `--include-private` to include private events in generated pages
-
-### GitHub Actions template (manual by default)
-
-To avoid automatic runs by default, the workflow is provided as a **template**
-at:
-
-`contrib/workflows/facebook-events-sync.yml`
-
-Copy it into your consuming site's `.github/workflows/` directory to use it.
-It is `workflow_dispatch` only out of the box. Uncomment `push`/`schedule` in
-the copied workflow when you want automatic syncing.
+For setup, secrets, feed URL instructions, and workflow options, see:
+**[Facebook event sync guide](docs/facebook-sync.md)**.
 
 ## Supported front matter
 
