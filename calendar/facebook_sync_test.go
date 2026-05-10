@@ -1,7 +1,6 @@
 package calendar
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -86,7 +85,7 @@ func TestSyncFacebookEvents(t *testing.T) {
 	writeFile(t, cancelledPath, "e-interested@facebook.com\n")
 
 	icsPath := filepath.Join(dir, "events.ics")
-	writeFile(t, icsPath, facebookFixture(time.Now().UTC()))
+	writeFile(t, icsPath, facebookFixture(t, time.Now().UTC()))
 
 	err := SyncFacebookEvents(SyncConfig{
 		ICSPath:             icsPath,
@@ -144,7 +143,7 @@ func TestSyncFacebookEventsIncludePrivate(t *testing.T) {
 	}
 
 	icsPath := filepath.Join(dir, "events.ics")
-	writeFile(t, icsPath, facebookFixture(time.Now().UTC()))
+	writeFile(t, icsPath, facebookFixture(t, time.Now().UTC()))
 
 	err := SyncFacebookEvents(SyncConfig{
 		ICSPath:         icsPath,
@@ -169,9 +168,14 @@ func TestSyncFacebookEventsIncludePrivate(t *testing.T) {
 	}
 }
 
-func facebookFixture(base time.Time) string {
-	created := base.Format("20060102T150405Z")
+func facebookFixture(t *testing.T, base time.Time) string {
+	t.Helper()
+	rawFixture, err := os.ReadFile(filepath.Join("testdata", "facebook_fixture.ics"))
+	if err != nil {
+		t.Fatalf("read facebook fixture: %v", err)
+	}
 
+	created := base.Format("20060102T150405Z")
 	goingStart := base.Add(24 * time.Hour).Format("20060102T150405Z")
 	goingEnd := base.Add(25 * time.Hour).Format("20060102T150405Z")
 	interestedStart := base.Add(48 * time.Hour).Format("20060102T150405Z")
@@ -183,107 +187,21 @@ func facebookFixture(base time.Time) string {
 	declinedStart := base.Add(120 * time.Hour).Format("20060102T150405Z")
 	declinedEnd := base.Add(121 * time.Hour).Format("20060102T150405Z")
 
-	// The shape intentionally mirrors Facebook ICS fields, folding, and escaping.
-	return fmt.Sprintf(`BEGIN:VCALENDAR
-PRODID:-//Facebook//NONSGML Facebook Events V1.0//EN
-X-WR-CALNAME:Fixture Facebook Events
-X-PUBLISHED-TTL:PT12H
-X-ORIGINAL-URL:/events/
-VERSION:2.0
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-DTSTAMP:%[1]s
-LAST-MODIFIED:%[1]s
-CREATED:%[1]s
-SEQUENCE:3476742
-ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
-DTSTART:%[2]s
-DTEND:%[3]s
-UID:e-going@facebook.com
-SUMMARY:! Going Event
-LOCATION:3181 Willow Creek Rd\, Prescott\, AZ
-  86301-6848\, United States
-URL:https://www.facebook.com/events/1111/?event_time_id=2222
-DESCRIPTION:Join us for a 5k at the Jan Alfano
-  parkrun each Saturday morning! We
-  start at 7:30am.\n\nhttps://www.fac
- ebook.com/events/1111/?event_time_
- id=2222
-CLASS:PUBLIC
-STATUS:CONFIRMED
-PARTSTAT:ACCEPTED
-END:VEVENT
-BEGIN:VEVENT
-DTSTAMP:%[1]s
-LAST-MODIFIED:%[1]s
-CREATED:%[1]s
-SEQUENCE:3476742
-ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
-DTSTART:%[4]s
-DTEND:%[5]s
-UID:e-interested@facebook.com
-SUMMARY:* Interested Event
-LOCATION:City Park\, Prescott\, AZ
-URL:https://www.facebook.com/events/3333/?event_time_id=4444
-DESCRIPTION:Bring snacks and water
-CLASS:PUBLIC
-STATUS:CONFIRMED
-PARTSTAT:TENTATIVE
-END:VEVENT
-BEGIN:VEVENT
-DTSTAMP:%[1]s
-LAST-MODIFIED:%[1]s
-CREATED:%[1]s
-SEQUENCE:3476742
-ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
-DTSTART:%[6]s
-DTEND:%[7]s
-UID:e-attendee-going@facebook.com
-SUMMARY:Attendee Status Event
-LOCATION:Trailhead\, Prescott\, AZ
-URL:https://www.facebook.com/events/5555/?event_time_id=6666
-DESCRIPTION:Status only from attendee
-CLASS:PUBLIC
-STATUS:CONFIRMED
-ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Fixture User:MAILTO:fixture@example.com
-END:VEVENT
-BEGIN:VEVENT
-DTSTAMP:%[1]s
-LAST-MODIFIED:%[1]s
-CREATED:%[1]s
-SEQUENCE:3476742
-ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
-DTSTART:%[8]s
-DTEND:%[9]s
-UID:e-private@facebook.com
-SUMMARY:Private Event
-LOCATION:Private\, Prescott\, AZ
-URL:https://www.facebook.com/events/7777/?event_time_id=8888
-DESCRIPTION:Should be skipped because it is private
-CLASS:PRIVATE
-STATUS:CONFIRMED
-PARTSTAT:ACCEPTED
-END:VEVENT
-BEGIN:VEVENT
-DTSTAMP:%[1]s
-LAST-MODIFIED:%[1]s
-CREATED:%[1]s
-SEQUENCE:3476742
-ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
-DTSTART:%[10]s
-DTEND:%[11]s
-UID:e-declined@facebook.com
-SUMMARY:Declined Event
-LOCATION:Declined\, Prescott\, AZ
-URL:https://www.facebook.com/events/9999/?event_time_id=1111
-DESCRIPTION:Should be skipped because the user declined
-CLASS:PUBLIC
-STATUS:CONFIRMED
-PARTSTAT:DECLINED
-END:VEVENT
-END:VCALENDAR
-`, created, goingStart, goingEnd, interestedStart, interestedEnd, attendeeStart, attendeeEnd, privateStart, privateEnd, declinedStart, declinedEnd)
+	replacer := strings.NewReplacer(
+		"{{CREATED}}", created,
+		"{{GOING_START}}", goingStart,
+		"{{GOING_END}}", goingEnd,
+		"{{INTERESTED_START}}", interestedStart,
+		"{{INTERESTED_END}}", interestedEnd,
+		"{{ATTENDEE_START}}", attendeeStart,
+		"{{ATTENDEE_END}}", attendeeEnd,
+		"{{PRIVATE_START}}", privateStart,
+		"{{PRIVATE_END}}", privateEnd,
+		"{{DECLINED_START}}", declinedStart,
+		"{{DECLINED_END}}", declinedEnd,
+	)
+
+	return replacer.Replace(string(rawFixture))
 }
 
 func writeFile(t *testing.T, path, content string) {

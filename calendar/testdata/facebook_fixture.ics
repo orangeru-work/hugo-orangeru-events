@@ -1,0 +1,99 @@
+BEGIN:VCALENDAR
+PRODID:-//Facebook//NONSGML Facebook Events V1.0//EN
+X-WR-CALNAME:Fixture Facebook Events
+X-PUBLISHED-TTL:PT12H
+X-ORIGINAL-URL:/events/
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+DTSTAMP:{{CREATED}}
+LAST-MODIFIED:{{CREATED}}
+CREATED:{{CREATED}}
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:{{GOING_START}}
+DTEND:{{GOING_END}}
+UID:e-going@facebook.com
+SUMMARY:! Going Event
+LOCATION:3181 Willow Creek Rd\, Prescott\, AZ
+  86301-6848\, United States
+URL:https://www.facebook.com/events/1111/?event_time_id=2222
+DESCRIPTION:Join us for a 5k at the Jan Alfano
+  parkrun each Saturday morning! We
+  start at 7:30am.\n\nhttps://www.fac
+ ebook.com/events/1111/?event_time_
+ id=2222
+CLASS:PUBLIC
+STATUS:CONFIRMED
+PARTSTAT:ACCEPTED
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:{{CREATED}}
+LAST-MODIFIED:{{CREATED}}
+CREATED:{{CREATED}}
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:{{INTERESTED_START}}
+DTEND:{{INTERESTED_END}}
+UID:e-interested@facebook.com
+SUMMARY:* Interested Event
+LOCATION:City Park\, Prescott\, AZ
+URL:https://www.facebook.com/events/3333/?event_time_id=4444
+DESCRIPTION:Bring snacks and water
+CLASS:PUBLIC
+STATUS:CONFIRMED
+PARTSTAT:TENTATIVE
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:{{CREATED}}
+LAST-MODIFIED:{{CREATED}}
+CREATED:{{CREATED}}
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:{{ATTENDEE_START}}
+DTEND:{{ATTENDEE_END}}
+UID:e-attendee-going@facebook.com
+SUMMARY:Attendee Status Event
+LOCATION:Trailhead\, Prescott\, AZ
+URL:https://www.facebook.com/events/5555/?event_time_id=6666
+DESCRIPTION:Status only from attendee
+CLASS:PUBLIC
+STATUS:CONFIRMED
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;CN=Fixture User:MAILTO:fixture@example.com
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:{{CREATED}}
+LAST-MODIFIED:{{CREATED}}
+CREATED:{{CREATED}}
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:{{PRIVATE_START}}
+DTEND:{{PRIVATE_END}}
+UID:e-private@facebook.com
+SUMMARY:Private Event
+LOCATION:Private\, Prescott\, AZ
+URL:https://www.facebook.com/events/7777/?event_time_id=8888
+DESCRIPTION:Should be skipped because it is private
+CLASS:PRIVATE
+STATUS:CONFIRMED
+PARTSTAT:ACCEPTED
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:{{CREATED}}
+LAST-MODIFIED:{{CREATED}}
+CREATED:{{CREATED}}
+SEQUENCE:3476742
+ORGANIZER;CN=Fixture Organizer:MAILTO:noreply@facebookmail.com
+DTSTART:{{DECLINED_START}}
+DTEND:{{DECLINED_END}}
+UID:e-declined@facebook.com
+SUMMARY:Declined Event
+LOCATION:Declined\, Prescott\, AZ
+URL:https://www.facebook.com/events/9999/?event_time_id=1111
+DESCRIPTION:Should be skipped because the user declined
+CLASS:PUBLIC
+STATUS:CONFIRMED
+PARTSTAT:DECLINED
+END:VEVENT
+END:VCALENDAR
