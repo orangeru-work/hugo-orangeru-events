@@ -1,25 +1,23 @@
-name: facebook-events-sync
+name: example-site-facebook-events
 
 on:
   workflow_dispatch:
-
-  # Optional: enable automatic runs by uncommenting this block.
-  # push:
-  #   branches:
-  #     - main
-  # schedule:
-  #   - cron: "17 13-23 * * *" # hourly 6am-4pm America/Phoenix (UTC-7)
-  #   - cron: "17 0-1 * * *"   # hourly 5pm-6pm America/Phoenix (UTC-7)
+  schedule:
+    - cron: "17 14 * * *" # daily around 7am America/Phoenix (UTC-7)
 
 permissions:
   contents: write
 
+concurrency:
+  group: example-site-facebook-events
+  cancel-in-progress: false
+
 env:
   TZ: America/Phoenix
-  EVENTS_MODULE_VERSION: latest
+  PRUNE_DAYS: "30"
 
 jobs:
-  update:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,26 +48,56 @@ jobs:
             "$FACEBOOK_EVENTS_ICS_URL" \
             --output /tmp/events.ics
 
-      - name: Generate event content
+      - name: Generate events into exampleSite
         run: |
-          go run github.com/orangeru-work/hugo-orangeru-events/cmd/facebook-events@${EVENTS_MODULE_VERSION} \
+          go run ./cmd/facebook-events \
             --ics /tmp/events.ics \
-            --output site/content/events \
-            --cancelled cancelled-events.txt \
+            --output exampleSite/content/events \
             --category-going club \
             --category-interested other \
             --category-default other
+
+      - name: Remove events older than 30 days
+        run: |
+          cutoff_epoch="$(date -u -d "${PRUNE_DAYS} days ago" +%s)"
+
+          for path in exampleSite/content/events/*.md; do
+            [ -f "$path" ] || continue
+            base="$(basename "$path")"
+            if [ "$base" = "_index.md" ]; then
+              continue
+            fi
+
+            start="$(sed -n 's/^startdate:[[:space:]]*//p' "$path" | head -n 1)"
+            if [ -z "$start" ]; then
+              start="$(sed -n 's/^startDate:[[:space:]]*//p' "$path" | head -n 1)"
+            fi
+            start="${start#\"}"
+            start="${start%\"}"
+            if [ -z "$start" ]; then
+              continue
+            fi
+
+            start_epoch="$(date -u -d "$start" +%s 2>/dev/null || true)"
+            if [ -z "$start_epoch" ]; then
+              continue
+            fi
+
+            if [ "$start_epoch" -lt "$cutoff_epoch" ]; then
+              rm -f "$path"
+            fi
+          done
 
       - name: Commit and push updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add site/content/events
+          git add exampleSite/content/events
 
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
           fi
 
-          git commit -m "events: sync Facebook calendar updates"
+          git commit -m "exampleSite: sync Facebook events"
           git push

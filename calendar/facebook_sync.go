@@ -238,7 +238,7 @@ func parseEvents(cfg SyncConfig) ([]event, error) {
 			Location:       e.Location,
 			UID:            uid,
 			Created:        e.Created.Format("2006-01-02T15:04:00Z"),
-			Category:       categoryForPartStat(e.PartStat, cfg),
+			Category:       categoryForPartStat(resolvePartStat(e), cfg),
 		})
 	}
 
@@ -258,4 +258,31 @@ func categoryForPartStat(partStat string, cfg SyncConfig) string {
 	default:
 		return cfg.DefaultCategory
 	}
+}
+
+func resolvePartStat(e gocal.Event) string {
+	if e.PartStat != "" {
+		return e.PartStat
+	}
+
+	foundTentative := false
+	for _, attendee := range e.Attendees {
+		status := strings.ToUpper(attendee.Status)
+		switch status {
+		case "ACCEPTED":
+			return status
+		case "TENTATIVE":
+			foundTentative = true
+		case "":
+			continue
+		default:
+			return status
+		}
+	}
+
+	if foundTentative {
+		return "TENTATIVE"
+	}
+
+	return ""
 }
