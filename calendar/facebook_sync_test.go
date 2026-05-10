@@ -129,6 +129,38 @@ func TestSyncFacebookEvents(t *testing.T) {
 	}
 }
 
+func TestSyncFacebookEventsIncludePrivate(t *testing.T) {
+	dir := t.TempDir()
+	outputDir := filepath.Join(dir, "events")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("mkdir output: %v", err)
+	}
+
+	icsPath := filepath.Join(dir, "events.ics")
+	writeFile(t, icsPath, facebookFixture(time.Now().UTC()))
+
+	err := SyncFacebookEvents(SyncConfig{
+		ICSPath:         icsPath,
+		OutputDir:       outputDir,
+		CleanupPrefix:   "e-",
+		IncludePrivate:  true,
+		GoingCategory:   "going-cat",
+		DefaultCategory: "default-cat",
+	})
+	if err != nil {
+		t.Fatalf("sync with private events included: %v", err)
+	}
+
+	assertExists(t, filepath.Join(outputDir, "e-private.md"))
+	content, err := os.ReadFile(filepath.Join(outputDir, "e-private.md"))
+	if err != nil {
+		t.Fatalf("read private event: %v", err)
+	}
+	if !strings.Contains(string(content), `category: going-cat`) {
+		t.Fatalf("private event category should follow partstat mapping")
+	}
+}
+
 func facebookFixture(base time.Time) string {
 	created := base.Format("20060102T150405Z")
 

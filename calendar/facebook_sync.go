@@ -39,6 +39,7 @@ type SyncConfig struct {
 	CancelledEventsPath string
 	CleanupPrefix       string
 	ExcludedOrganizers  map[string]struct{}
+	IncludePrivate      bool
 	GoingCategory       string
 	InterestedCategory  string
 	DefaultCategory     string
@@ -193,7 +194,7 @@ func parseEvents(cfg SyncConfig) ([]event, error) {
 
 	var events []event
 	for _, e := range parser.Events {
-		if e.Class != "PUBLIC" {
+		if !cfg.IncludePrivate && strings.EqualFold(strings.TrimSpace(e.Class), "PRIVATE") {
 			continue
 		}
 		if _, excluded := cfg.ExcludedOrganizers[e.Organizer.Cn]; excluded {

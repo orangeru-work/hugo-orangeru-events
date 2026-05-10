@@ -26,6 +26,7 @@ func main() {
 		outputDir          string
 		cancelledPath      string
 		cleanupPrefix      string
+		includePrivate     bool
 		goingCategory      string
 		interestedCategory string
 		defaultCategory    string
@@ -36,6 +37,7 @@ func main() {
 	flag.StringVar(&outputDir, "output", "", "Path to Hugo events content directory")
 	flag.StringVar(&cancelledPath, "cancelled", "", "Path to cancelled-events file (optional)")
 	flag.StringVar(&cleanupPrefix, "cleanup-prefix", "e", "Delete existing generated markdown files matching this prefix")
+	flag.BoolVar(&includePrivate, "include-private", false, "Include CLASS:PRIVATE events")
 	flag.StringVar(&goingCategory, "category-going", "club", "Category to assign for GOING/ACCEPTED events")
 	flag.StringVar(&interestedCategory, "category-interested", "other", "Category to assign for INTERESTED/TENTATIVE events")
 	flag.StringVar(&defaultCategory, "category-default", "other", "Category to assign for other participant states")
@@ -58,6 +60,7 @@ func main() {
 		CancelledEventsPath: cancelledPath,
 		CleanupPrefix:       cleanupPrefix,
 		ExcludedOrganizers:  excludedOrganizers,
+		IncludePrivate:      includePrivate,
 		GoingCategory:       goingCategory,
 		InterestedCategory:  interestedCategory,
 		DefaultCategory:     defaultCategory,

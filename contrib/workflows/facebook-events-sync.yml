@@ -56,6 +56,7 @@ jobs:
             --ics /tmp/events.ics \
             --output site/content/events \
             --cancelled cancelled-events.txt \
+            --include-private=false \
             --category-going club \
             --category-interested other \
             --category-default other

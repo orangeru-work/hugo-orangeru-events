@@ -36,6 +36,7 @@ go run ./cmd/facebook-events \
   --ics /tmp/events.ics \
   --output site/content/events \
   --cancelled cancelled-events.txt \
+  --include-private=false \
   --category-going club \
   --category-interested other \
   --category-default other
@@ -49,6 +50,11 @@ Category mapping is configurable:
 
 You can also exclude organizer names with repeatable
 `--exclude-organizer "<name>"`.
+
+Private event filtering is configurable:
+
+- By default, `CLASS:PRIVATE` events are filtered out
+- Set `--include-private` to include private events in generated pages
 
 ### GitHub Actions template (manual by default)
 

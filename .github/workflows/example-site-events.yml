@@ -53,6 +53,7 @@ jobs:
           go run ./cmd/facebook-events \
             --ics /tmp/events.ics \
             --output exampleSite/content/events \
+            --include-private=false \
             --category-going club \
             --category-interested other \
             --category-default other
