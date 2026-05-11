@@ -51,6 +51,11 @@ Contained under `event`:
 
 If `category` is missing, it defaults to `other`.
 
+Generated Facebook event pages also include:
+
+- `generated_by`
+- `generated_at`
+
 ## Configuration (`params.eventsCalendar`)
 
 Set these in `site.Params.eventsCalendar` (or page front matter `eventsCalendar` to override per page):

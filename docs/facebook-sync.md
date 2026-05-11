@@ -12,11 +12,12 @@ From a user point of view, the sync does this:
 3. Applies category mapping for going/interested/default responses.
 4. Skips events marked `PARTSTAT:DECLINED`.
 5. Writes event-specific values under an `event:` front matter block.
-6. Converts supported GPS coordinate text to Google Maps links.
-7. Leaves feature images unset (no generated `feature-img` field).
-8. Keeps previously generated files by default.
-9. Can optionally delete generated events older than a configured number of days.
-10. (exampleSite workflow only) opts into deleting generated events older than 30 days.
+6. Adds flat generation markers: `generated_by` and `generated_at`.
+7. Converts supported GPS coordinate text to Google Maps links.
+8. Leaves feature images unset (no generated `feature-img` field).
+9. Keeps previously generated files by default.
+10. Can optionally delete generated events older than a configured number of days.
+11. (exampleSite workflow only) opts into deleting generated events older than 30 days.
 
 The module expects event metadata in the `event` block (for example,
 `event.startdate`, `event.category`, `event.location`).
@@ -87,6 +88,8 @@ go run ./cmd/facebook-events \
 
 By default, the sync does **not** delete previously generated event markdown files.
 Set `--delete-generated-older-than-days` only if you want age-based pruning.
+When pruning is enabled, the module only deletes files marked with
+`generated_by: facebook-events` and a parseable `generated_at` timestamp.
 
 ## GPS coordinate handling
 

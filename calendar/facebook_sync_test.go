@@ -58,14 +58,16 @@ func TestLoadCancelledEventIDs(t *testing.T) {
 
 func TestRemoveGeneratedEventFiles(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "e-old.md"), "old")
+	oldTime := time.Now().Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	writeFile(t, filepath.Join(dir, "e-old.md"), strings.Join([]string{
+		"---",
+		"generated_by: facebook-events",
+		"generated_at: " + oldTime,
+		"---",
+		"old",
+	}, "\n"))
 	writeFile(t, filepath.Join(dir, "e-keep.txt"), "txt")
 	writeFile(t, filepath.Join(dir, "manual.md"), "manual")
-
-	oldTime := time.Now().Add(-10 * 24 * time.Hour)
-	if err := os.Chtimes(filepath.Join(dir, "e-old.md"), oldTime, oldTime); err != nil {
-		t.Fatalf("set old modtime: %v", err)
-	}
 
 	if err := removeGeneratedEventFiles(dir, "e-", 7, time.Now()); err != nil {
 		t.Fatalf("remove generated files: %v", err)
@@ -78,14 +80,33 @@ func TestRemoveGeneratedEventFiles(t *testing.T) {
 
 func TestRemoveGeneratedEventFilesDisabledByDefault(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "e-old.md"), "old")
-
-	oldTime := time.Now().Add(-10 * 24 * time.Hour)
-	if err := os.Chtimes(filepath.Join(dir, "e-old.md"), oldTime, oldTime); err != nil {
-		t.Fatalf("set old modtime: %v", err)
-	}
+	oldTime := time.Now().Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	writeFile(t, filepath.Join(dir, "e-old.md"), strings.Join([]string{
+		"---",
+		"generated_by: facebook-events",
+		"generated_at: " + oldTime,
+		"---",
+		"old",
+	}, "\n"))
 
 	if err := removeGeneratedEventFiles(dir, "e-", 0, time.Now()); err != nil {
+		t.Fatalf("remove generated files: %v", err)
+	}
+
+	assertExists(t, filepath.Join(dir, "e-old.md"))
+}
+
+func TestRemoveGeneratedEventFilesSkipsFilesWithoutGeneratedMetadata(t *testing.T) {
+	dir := t.TempDir()
+	oldTime := time.Now().Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	writeFile(t, filepath.Join(dir, "e-old.md"), strings.Join([]string{
+		"---",
+		"generated_at: " + oldTime,
+		"---",
+		"old",
+	}, "\n"))
+
+	if err := removeGeneratedEventFiles(dir, "e-", 7, time.Now()); err != nil {
 		t.Fatalf("remove generated files: %v", err)
 	}
 
@@ -101,10 +122,14 @@ func TestSyncFacebookEvents(t *testing.T) {
 
 	writeFile(t, filepath.Join(outputDir, "e-stale.md"), "stale generated")
 	writeFile(t, filepath.Join(outputDir, "manual.md"), "manual event")
-	oldTime := time.Now().Add(-10 * 24 * time.Hour)
-	if err := os.Chtimes(filepath.Join(outputDir, "e-stale.md"), oldTime, oldTime); err != nil {
-		t.Fatalf("set stale generated modtime: %v", err)
-	}
+	oldTime := time.Now().Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	writeFile(t, filepath.Join(outputDir, "e-stale.md"), strings.Join([]string{
+		"---",
+		"generated_by: facebook-events",
+		"generated_at: " + oldTime,
+		"---",
+		"stale generated",
+	}, "\n"))
 
 	cancelledPath := filepath.Join(dir, "cancelled-events.txt")
 	writeFile(t, cancelledPath, "e-interested@facebook.com\n")
@@ -150,6 +175,12 @@ func TestSyncFacebookEvents(t *testing.T) {
 	}
 	if strings.Contains(text, `feature-img:`) {
 		t.Fatalf("generated file should not set feature-img")
+	}
+	if !strings.Contains(text, "generated_by: facebook-events") {
+		t.Fatalf("generated file missing generated_by marker")
+	}
+	if !strings.Contains(text, "generated_at: ") {
+		t.Fatalf("generated file missing generated_at marker")
 	}
 
 	attendeeContent, err := os.ReadFile(filepath.Join(outputDir, "e-attendee-going.md"))
