@@ -19,6 +19,8 @@ layout: %v
 outputs:
   - html
   - calendar
+generated_by: %v
+generated_at: %v
 event:
   startdate: %v
   enddate: %v
@@ -32,12 +34,15 @@ event:
 %v
 `
 
+const generatedByValue = "facebook-events"
+
 // SyncConfig controls Facebook ICS -> Hugo event page generation.
 type SyncConfig struct {
 	ICSPath             string
 	OutputDir           string
 	CancelledEventsPath string
 	CleanupPrefix       string
+	DeleteOlderThanDays int
 	ExcludedOrganizers  map[string]struct{}
 	IncludePrivate      bool
 	GoingCategory       string
@@ -84,7 +89,8 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 		return err
 	}
 
-	if err := removeGeneratedEventFiles(cfg.OutputDir, cfg.CleanupPrefix); err != nil {
+	now := time.Now().UTC()
+	if err := removeGeneratedEventFiles(cfg.OutputDir, cfg.CleanupPrefix, cfg.DeleteOlderThanDays, now); err != nil {
 		return err
 	}
 
@@ -108,6 +114,8 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 			e.Summary,
 			e.Created,
 			"post",
+			generatedByValue,
+			now.Format(time.RFC3339),
 			e.Start,
 			e.End,
 			e.Category,
@@ -128,11 +136,17 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 	return nil
 }
 
-func removeGeneratedEventFiles(outputDir, cleanupPrefix string) error {
+func removeGeneratedEventFiles(outputDir, cleanupPrefix string, deleteOlderThanDays int, now time.Time) error {
+	if deleteOlderThanDays <= 0 {
+		return nil
+	}
+
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
 		return err
 	}
+
+	cutoff := now.Add(-time.Duration(deleteOlderThanDays) * 24 * time.Hour)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -144,12 +158,69 @@ func removeGeneratedEventFiles(outputDir, cleanupPrefix string) error {
 			continue
 		}
 
+		generatedBy, generatedAt, err := readGeneratedMetadata(filepath.Join(outputDir, name))
+		if err != nil {
+			return err
+		}
+		if generatedBy != generatedByValue || generatedAt.IsZero() || !generatedAt.Before(cutoff) {
+			continue
+		}
+
 		if err := os.Remove(filepath.Join(outputDir, name)); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func readGeneratedMetadata(path string) (string, time.Time, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	var generatedBy string
+	var generatedAt time.Time
+
+	for _, line := range strings.Split(string(content), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			if generatedBy != "" || !generatedAt.IsZero() {
+				break
+			}
+			continue
+		}
+
+		if generatedBy == "" {
+			if value, ok := metadataValue(trimmed, "generated_by"); ok {
+				generatedBy = value
+				continue
+			}
+		}
+		if generatedAt.IsZero() {
+			if value, ok := metadataValue(trimmed, "generated_at"); ok {
+				parsed, err := time.Parse(time.RFC3339, value)
+				if err != nil {
+					return generatedBy, time.Time{}, nil
+				}
+				generatedAt = parsed
+			}
+		}
+	}
+
+	return generatedBy, generatedAt, nil
+}
+
+func metadataValue(line, key string) (string, bool) {
+	prefix := key + ":"
+	if !strings.HasPrefix(line, prefix) {
+		return "", false
+	}
+
+	value := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+	value = strings.Trim(value, `"`)
+	return value, true
 }
 
 func loadCancelledEventIDs(path string) (map[string]struct{}, error) {
