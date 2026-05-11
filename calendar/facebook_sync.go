@@ -38,6 +38,7 @@ type SyncConfig struct {
 	OutputDir           string
 	CancelledEventsPath string
 	CleanupPrefix       string
+	DeleteOlderThanDays int
 	ExcludedOrganizers  map[string]struct{}
 	IncludePrivate      bool
 	GoingCategory       string
@@ -84,7 +85,7 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 		return err
 	}
 
-	if err := removeGeneratedEventFiles(cfg.OutputDir, cfg.CleanupPrefix); err != nil {
+	if err := removeGeneratedEventFiles(cfg.OutputDir, cfg.CleanupPrefix, cfg.DeleteOlderThanDays, time.Now().UTC()); err != nil {
 		return err
 	}
 
@@ -128,11 +129,17 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 	return nil
 }
 
-func removeGeneratedEventFiles(outputDir, cleanupPrefix string) error {
+func removeGeneratedEventFiles(outputDir, cleanupPrefix string, deleteOlderThanDays int, now time.Time) error {
+	if deleteOlderThanDays <= 0 {
+		return nil
+	}
+
 	entries, err := os.ReadDir(outputDir)
 	if err != nil {
 		return err
 	}
+
+	cutoff := now.Add(-time.Duration(deleteOlderThanDays) * 24 * time.Hour)
 
 	for _, entry := range entries {
 		if entry.IsDir() {
@@ -141,6 +148,14 @@ func removeGeneratedEventFiles(outputDir, cleanupPrefix string) error {
 
 		name := entry.Name()
 		if !strings.HasPrefix(name, cleanupPrefix) || !strings.HasSuffix(name, ".md") {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !info.ModTime().Before(cutoff) {
 			continue
 		}
 

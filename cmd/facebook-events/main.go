@@ -22,21 +22,23 @@ func (f *repeatedFlag) Set(value string) error {
 
 func main() {
 	var (
-		icsPath            string
-		outputDir          string
-		cancelledPath      string
-		cleanupPrefix      string
-		includePrivate     bool
-		goingCategory      string
-		interestedCategory string
-		defaultCategory    string
-		excludes           repeatedFlag
+		icsPath             string
+		outputDir           string
+		cancelledPath       string
+		cleanupPrefix       string
+		deleteOlderThanDays int
+		includePrivate      bool
+		goingCategory       string
+		interestedCategory  string
+		defaultCategory     string
+		excludes            repeatedFlag
 	)
 
 	flag.StringVar(&icsPath, "ics", "", "Path to source ICS file")
 	flag.StringVar(&outputDir, "output", "", "Path to Hugo events content directory")
 	flag.StringVar(&cancelledPath, "cancelled", "", "Path to cancelled-events file (optional)")
-	flag.StringVar(&cleanupPrefix, "cleanup-prefix", "e", "Delete existing generated markdown files matching this prefix")
+	flag.StringVar(&cleanupPrefix, "cleanup-prefix", "e", "Generated markdown file prefix used when age-based deletion is enabled")
+	flag.IntVar(&deleteOlderThanDays, "delete-generated-older-than-days", 0, "Delete generated markdown files older than this many days; 0 keeps generated files indefinitely")
 	flag.BoolVar(&includePrivate, "include-private", false, "Include CLASS:PRIVATE events")
 	flag.StringVar(&goingCategory, "category-going", "club", "Category to assign for GOING/ACCEPTED events")
 	flag.StringVar(&interestedCategory, "category-interested", "other", "Category to assign for INTERESTED/TENTATIVE events")
@@ -59,6 +61,7 @@ func main() {
 		OutputDir:           outputDir,
 		CancelledEventsPath: cancelledPath,
 		CleanupPrefix:       cleanupPrefix,
+		DeleteOlderThanDays: deleteOlderThanDays,
 		ExcludedOrganizers:  excludedOrganizers,
 		IncludePrivate:      includePrivate,
 		GoingCategory:       goingCategory,

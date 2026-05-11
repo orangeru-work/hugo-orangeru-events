@@ -62,13 +62,34 @@ func TestRemoveGeneratedEventFiles(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "e-keep.txt"), "txt")
 	writeFile(t, filepath.Join(dir, "manual.md"), "manual")
 
-	if err := removeGeneratedEventFiles(dir, "e-"); err != nil {
+	oldTime := time.Now().Add(-10 * 24 * time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "e-old.md"), oldTime, oldTime); err != nil {
+		t.Fatalf("set old modtime: %v", err)
+	}
+
+	if err := removeGeneratedEventFiles(dir, "e-", 7, time.Now()); err != nil {
 		t.Fatalf("remove generated files: %v", err)
 	}
 
 	assertExists(t, filepath.Join(dir, "manual.md"))
 	assertExists(t, filepath.Join(dir, "e-keep.txt"))
 	assertNotExists(t, filepath.Join(dir, "e-old.md"))
+}
+
+func TestRemoveGeneratedEventFilesDisabledByDefault(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "e-old.md"), "old")
+
+	oldTime := time.Now().Add(-10 * 24 * time.Hour)
+	if err := os.Chtimes(filepath.Join(dir, "e-old.md"), oldTime, oldTime); err != nil {
+		t.Fatalf("set old modtime: %v", err)
+	}
+
+	if err := removeGeneratedEventFiles(dir, "e-", 0, time.Now()); err != nil {
+		t.Fatalf("remove generated files: %v", err)
+	}
+
+	assertExists(t, filepath.Join(dir, "e-old.md"))
 }
 
 func TestSyncFacebookEvents(t *testing.T) {
@@ -80,6 +101,10 @@ func TestSyncFacebookEvents(t *testing.T) {
 
 	writeFile(t, filepath.Join(outputDir, "e-stale.md"), "stale generated")
 	writeFile(t, filepath.Join(outputDir, "manual.md"), "manual event")
+	oldTime := time.Now().Add(-10 * 24 * time.Hour)
+	if err := os.Chtimes(filepath.Join(outputDir, "e-stale.md"), oldTime, oldTime); err != nil {
+		t.Fatalf("set stale generated modtime: %v", err)
+	}
 
 	cancelledPath := filepath.Join(dir, "cancelled-events.txt")
 	writeFile(t, cancelledPath, "e-interested@facebook.com\n")
@@ -92,6 +117,7 @@ func TestSyncFacebookEvents(t *testing.T) {
 		OutputDir:           outputDir,
 		CancelledEventsPath: cancelledPath,
 		CleanupPrefix:       "e-",
+		DeleteOlderThanDays: 7,
 		GoingCategory:       "going-cat",
 		InterestedCategory:  "interested-cat",
 		DefaultCategory:     "default-cat",
@@ -146,12 +172,13 @@ func TestSyncFacebookEventsIncludePrivate(t *testing.T) {
 	writeFile(t, icsPath, facebookFixture(t, time.Now().UTC()))
 
 	err := SyncFacebookEvents(SyncConfig{
-		ICSPath:         icsPath,
-		OutputDir:       outputDir,
-		CleanupPrefix:   "e-",
-		IncludePrivate:  true,
-		GoingCategory:   "going-cat",
-		DefaultCategory: "default-cat",
+		ICSPath:             icsPath,
+		OutputDir:           outputDir,
+		CleanupPrefix:       "e-",
+		DeleteOlderThanDays: 7,
+		IncludePrivate:      true,
+		GoingCategory:       "going-cat",
+		DefaultCategory:     "default-cat",
 	})
 	if err != nil {
 		t.Fatalf("sync with private events included: %v", err)
@@ -166,6 +193,34 @@ func TestSyncFacebookEventsIncludePrivate(t *testing.T) {
 	if !strings.Contains(string(content), `category: going-cat`) {
 		t.Fatalf("private event category should follow partstat mapping")
 	}
+}
+
+func TestSyncFacebookEventsKeepsGeneratedFilesByDefault(t *testing.T) {
+	dir := t.TempDir()
+	outputDir := filepath.Join(dir, "events")
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("mkdir output: %v", err)
+	}
+
+	writeFile(t, filepath.Join(outputDir, "e-stale.md"), "stale generated")
+
+	icsPath := filepath.Join(dir, "events.ics")
+	writeFile(t, icsPath, facebookFixture(t, time.Now().UTC()))
+
+	err := SyncFacebookEvents(SyncConfig{
+		ICSPath:            icsPath,
+		OutputDir:          outputDir,
+		CleanupPrefix:      "e-",
+		GoingCategory:      "going-cat",
+		InterestedCategory: "interested-cat",
+		DefaultCategory:    "default-cat",
+	})
+	if err != nil {
+		t.Fatalf("sync facebook events: %v", err)
+	}
+
+	assertExists(t, filepath.Join(outputDir, "e-stale.md"))
+	assertExists(t, filepath.Join(outputDir, "e-going.md"))
 }
 
 func facebookFixture(t *testing.T, base time.Time) string {

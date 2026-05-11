@@ -53,41 +53,11 @@ jobs:
           go run ./cmd/facebook-events \
             --ics /tmp/events.ics \
             --output exampleSite/content/events \
+            --delete-generated-older-than-days "${PRUNE_DAYS}" \
             --include-private=false \
             --category-going club \
             --category-interested other \
             --category-default other
-
-      - name: Remove events older than 30 days
-        run: |
-          cutoff_epoch="$(date -u -d "${PRUNE_DAYS} days ago" +%s)"
-
-          for path in exampleSite/content/events/*.md; do
-            [ -f "$path" ] || continue
-            base="$(basename "$path")"
-            if [ "$base" = "_index.md" ]; then
-              continue
-            fi
-
-            start="$(sed -n 's/^startdate:[[:space:]]*//p' "$path" | head -n 1)"
-            if [ -z "$start" ]; then
-              start="$(sed -n 's/^startDate:[[:space:]]*//p' "$path" | head -n 1)"
-            fi
-            start="${start#\"}"
-            start="${start%\"}"
-            if [ -z "$start" ]; then
-              continue
-            fi
-
-            start_epoch="$(date -u -d "$start" +%s 2>/dev/null || true)"
-            if [ -z "$start_epoch" ]; then
-              continue
-            fi
-
-            if [ "$start_epoch" -lt "$cutoff_epoch" ]; then
-              rm -f "$path"
-            fi
-          done
 
       - name: Commit and push updates
         run: |

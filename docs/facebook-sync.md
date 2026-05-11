@@ -14,8 +14,9 @@ From a user point of view, the sync does this:
 5. Writes event-specific values under an `event:` front matter block.
 6. Converts supported GPS coordinate text to Google Maps links.
 7. Leaves feature images unset (no generated `feature-img` field).
-8. Removes previously generated files before writing fresh output.
-9. (exampleSite workflow only) deletes generated events older than 30 days.
+8. Keeps previously generated files by default.
+9. Can optionally delete generated events older than a configured number of days.
+10. (exampleSite workflow only) opts into deleting generated events older than 30 days.
 
 The module expects event metadata in the `event` block (for example,
 `event.startdate`, `event.category`, `event.location`).
@@ -50,7 +51,7 @@ Use `.github/workflows/example-site-events.yml` in this repo.
 
 - Trigger: manual (`workflow_dispatch`) and weekly schedule
 - Output: `exampleSite/content/events`
-- Pruning: removes generated events older than 30 days
+- Pruning: opts into removing generated events older than 30 days
 
 ### B) Sync a consuming site repository
 
@@ -67,6 +68,7 @@ go run ./cmd/facebook-events \
   --ics /tmp/events.ics \
   --output site/content/events \
   --cancelled cancelled-events.txt \
+  --delete-generated-older-than-days 30 \
   --include-private=false \
   --category-going club \
   --category-interested other \
@@ -81,6 +83,10 @@ go run ./cmd/facebook-events \
 - `--include-private`: include `CLASS:PRIVATE` events when set to true
 - `--exclude-organizer`: repeatable organizer exclusion filter
 - `--cancelled`: optional file of event IDs to suppress
+- `--delete-generated-older-than-days`: optional cleanup window for generated files; `0` keeps generated files indefinitely
+
+By default, the sync does **not** delete previously generated event markdown files.
+Set `--delete-generated-older-than-days` only if you want age-based pruning.
 
 ## GPS coordinate handling
 
