@@ -91,6 +91,10 @@ Set `--delete-generated-older-than-days` only if you want age-based pruning.
 When pruning is enabled, the module only deletes files marked with
 `generated_by: facebook-events` and a parseable `generated_at` timestamp.
 
+For `v1.x`, the sync treats the generated markers, CLI flags, and documented
+default pruning behavior as stable public contract. Any breaking change to that
+surface should require a new major version.
+
 ## GPS coordinate handling
 
 The sync normalizes common coordinate formats found in Facebook descriptions and

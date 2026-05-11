@@ -56,6 +56,28 @@ Generated Facebook event pages also include:
 - `generated_by`
 - `generated_at`
 
+## Compatibility
+
+- **Go / generator CLI:** developed and tested with Go `1.24.x`
+- **Hugo sites:** validated in consuming sites running Hugo `0.147.x` and `0.148.x`
+- **Hugo Modules:** required
+- **Hugo extended:** not required by this module itself
+
+If you use the Facebook sync workflow, match the workflow `go-version` to a
+Go `1.24.x` runtime.
+
+## v1 stability promise
+
+For `v1.x`, the following are treated as stable public surface area:
+
+- the partial path `layouts/partials/events/interactive-calendar.html`
+- the `event.*` front matter contract used by the interactive calendar
+- generated file markers `generated_by` and `generated_at`
+- the Facebook sync CLI flags and their documented defaults
+- the default pruning behavior (`--delete-generated-older-than-days=0` keeps generated files)
+
+Changes to those contracts should require a new major version.
+
 ## Configuration (`params.eventsCalendar`)
 
 Set these in `site.Params.eventsCalendar` (or page front matter `eventsCalendar` to override per page):
