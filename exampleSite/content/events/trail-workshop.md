@@ -1,5 +1,6 @@
 +++
 title = "Trail Skills Workshop"
+[event]
 startDate = "2026-05-09T10:00:00-07:00"
 endDate = "2026-05-09T12:00:00-07:00"
 location = "Thumb Butte Trailhead"

@@ -26,21 +26,28 @@ module:
 {{ partial "events/interactive-calendar.html" . }}
 ```
 
+## Facebook ICS event generation (optional)
+
+Want your events page to stay fresh without hand-editing markdown?  
+This module includes a Facebook ICS sync flow that can generate event pages,
+apply sensible category mapping, auto-link supported GPS coordinates, and run on
+a schedule when you decide to turn it on.
+
+For setup, secrets, feed URL instructions, and workflow options, see:
+**[Facebook event sync guide](docs/facebook-sync.md)**.
+
 ## Supported front matter
 
-Required:
+Contained under `event`:
 
-- `startdate` or `startDate`
-
-Optional:
-
-- `enddate` or `endDate`
-- `category` (preferred)
-- `event_type` (legacy string fallback)
-- `location`
-- `external_url`
-- `rsvp`
-- `calendar_description` or `ics_description` (`ICSDescription` also supported as legacy fallback)
+- `event.startdate` (required)
+- `event.enddate`
+- `event.category`
+- `event.event_type` (legacy fallback when category is missing)
+- `event.location`
+- `event.external_url`
+- `event.rsvp`
+- `event.calendar_description` / `event.ics_description`
 
 If `category` is missing, it defaults to `other`.
 

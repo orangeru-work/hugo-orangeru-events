@@ -1,0 +1,104 @@
+name: example-site-facebook-events
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 14 * * 0" # weekly Sunday around 7am America/Phoenix (UTC-7)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: example-site-facebook-events
+  cancel-in-progress: false
+
+env:
+  TZ: America/Phoenix
+  PRUNE_DAYS: "30"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Fetch latest events.ics
+        env:
+          FACEBOOK_EVENTS_ICS_URL_SECRET: ${{ secrets.FACEBOOK_EVENTS_ICS_URL }}
+          FACEBOOK_EVENTS_ICS_URL_VAR: ${{ vars.FACEBOOK_EVENTS_ICS_URL }}
+        run: |
+          FACEBOOK_EVENTS_ICS_URL="$FACEBOOK_EVENTS_ICS_URL_SECRET"
+          if [ -z "$FACEBOOK_EVENTS_ICS_URL" ]; then
+            FACEBOOK_EVENTS_ICS_URL="$FACEBOOK_EVENTS_ICS_URL_VAR"
+          fi
+
+          if [ -z "$FACEBOOK_EVENTS_ICS_URL" ]; then
+            echo "FACEBOOK_EVENTS_ICS_URL is required as a secret or repository variable."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error --location \
+            "$FACEBOOK_EVENTS_ICS_URL" \
+            --output /tmp/events.ics
+
+      - name: Generate events into exampleSite
+        run: |
+          go run ./cmd/facebook-events \
+            --ics /tmp/events.ics \
+            --output exampleSite/content/events \
+            --include-private=false \
+            --category-going club \
+            --category-interested other \
+            --category-default other
+
+      - name: Remove events older than 30 days
+        run: |
+          cutoff_epoch="$(date -u -d "${PRUNE_DAYS} days ago" +%s)"
+
+          for path in exampleSite/content/events/*.md; do
+            [ -f "$path" ] || continue
+            base="$(basename "$path")"
+            if [ "$base" = "_index.md" ]; then
+              continue
+            fi
+
+            start="$(sed -n 's/^startdate:[[:space:]]*//p' "$path" | head -n 1)"
+            if [ -z "$start" ]; then
+              start="$(sed -n 's/^startDate:[[:space:]]*//p' "$path" | head -n 1)"
+            fi
+            start="${start#\"}"
+            start="${start%\"}"
+            if [ -z "$start" ]; then
+              continue
+            fi
+
+            start_epoch="$(date -u -d "$start" +%s 2>/dev/null || true)"
+            if [ -z "$start_epoch" ]; then
+              continue
+            fi
+
+            if [ "$start_epoch" -lt "$cutoff_epoch" ]; then
+              rm -f "$path"
+            fi
+          done
+
+      - name: Commit and push updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add exampleSite/content/events
+
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+
+          git commit -m "exampleSite: sync Facebook events"
+          git push
