@@ -1,10 +1,14 @@
 # hugo-orangeru-events
 
-Reusable Hugo module for an interactive events calendar partial.
+Reusable Hugo module for interactive event calendars, event detail pages, and ICS feeds.
 
 ## What this module provides
 
 - `layouts/partials/events/interactive-calendar.html`
+- `layouts/events/list.html`
+- `layouts/events/single.html`
+- `layouts/events/list.calendar.ics`
+- `layouts/events/single.calendar.ics`
 - FullCalendar month/week/list views
 - Category legend with filtering
 - Event detail preview panel
@@ -20,7 +24,32 @@ module:
     - path: github.com/orangeru-work/hugo-orangeru-events
 ```
 
-2. Render it from your events list template:
+2. Add the calendar output format in your site config:
+
+```yaml
+outputFormats:
+  Calendar:
+    protocol: "https://"
+```
+
+3. Either use an `events` content section, or set `type: events` on any section that should use the shared templates:
+
+```yaml
+---
+title: Club Calendar
+type: events
+outputs:
+  - html
+  - calendar
+cascade:
+  type: events
+  outputs:
+    - html
+    - calendar
+---
+```
+
+4. If you want a custom list layout, you can still render the shared calendar partial directly:
 
 ```go-html-template
 {{ partial "events/interactive-calendar.html" . }}
@@ -51,6 +80,10 @@ Contained under `event`:
 
 If `category` is missing, it defaults to `other`.
 
+Nested event content is supported. Events can live directly under the section or
+inside subfolders such as `content/events/2026/05/...`; the shared calendar and
+ICS templates collect them recursively.
+
 Generated Facebook event pages also include:
 
 - `generated_by`
@@ -76,6 +109,10 @@ Options:
 - `showSubscribeButton` (bool, default `true`)
 - `subscribeFeedURL` (string, default `<section rel permalink>index.ics`)
 - `categoryColors` (map of category -> hex color)
+- `calendarName` (string, default `site.Title`)
+- `calendarDescription` (string, default `<calendarName> calendar feed`)
+- `uidDomain` (string, default derived from `site.BaseURL`)
+- `prodID` (string, default `-//<calendarName>//Calendar//EN`)
 
 ## Mobile subscribe behavior
 

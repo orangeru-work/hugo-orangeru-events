@@ -21,10 +21,10 @@
   {{- $subscribeFeedURL = printf "%v" (index $calendarConfig "subscribeFeedURL") -}}
 {{- end -}}
 
-{{- $pages := .Pages -}}
+{{- $entries := partial "events/pages.html" . -}}
 {{- $events := slice -}}
-{{- range $pages -}}
-  {{- $page := . -}}
+{{- range $entries -}}
+  {{- $page := .page -}}
   {{- with $page.Params.event -}}
     {{- $eventParams := . -}}
     {{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
@@ -298,20 +298,15 @@
 <noscript>
   <h3>Upcoming Events</h3>
   <ul class="events-calendar-noscript-list">
-    {{- range first 25 .Pages.ByDate -}}
-      {{- $page := . -}}
-      {{- with $page.Params.event -}}
-        {{- $startRaw := or .startdate .startDate -}}
-        {{- if $startRaw -}}
-          {{- $start := time.AsTime $startRaw -}}
-          {{- $minus1d := time.ParseDuration "-24h" -}}
-          {{- if ($start.After (time.Now.Add $minus1d)) -}}
-            <li>
-              <a href="{{ $page.Permalink }}">{{ $page.Title }}</a>
-              <time class="events-calendar-noscript-time">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
-            </li>
-          {{- end -}}
-        {{- end -}}
+    {{- range $entries -}}
+      {{- $page := .page -}}
+      {{- $start := time.AsTime .startRaw -}}
+      {{- $minus1d := time.ParseDuration "-24h" -}}
+      {{- if ($start.After (time.Now.Add $minus1d)) -}}
+        <li>
+          <a href="{{ $page.Permalink }}">{{ $page.Title }}</a>
+          <time class="events-calendar-noscript-time">{{ $start.Local.Format "Jan 2, 2006 3:04pm" }}</time>
+        </li>
       {{- end -}}
     {{- end -}}
   </ul>

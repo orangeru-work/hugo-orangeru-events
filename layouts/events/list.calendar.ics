@@ -1,0 +1,81 @@
+{{- $calendarConfig := dict -}}
+{{- with .Site.Params.eventsCalendar -}}
+  {{- $calendarConfig = . -}}
+{{- end -}}
+{{- $calendarName := htmlUnescape (printf "%v" .Site.Title) -}}
+{{- if isset $calendarConfig "calendarName" -}}
+  {{- $calendarName = htmlUnescape (printf "%v" (index $calendarConfig "calendarName")) -}}
+{{- end -}}
+{{- $baseURL := site.BaseURL | default "" -}}
+{{- $uidDomain := replaceRE "^https?://([^/]+)/?.*$" "$1" $baseURL -}}
+{{- if not $uidDomain -}}
+  {{- $uidDomain = "events.local" -}}
+{{- end -}}
+{{- if isset $calendarConfig "uidDomain" -}}
+  {{- $uidDomain = printf "%v" (index $calendarConfig "uidDomain") -}}
+{{- end -}}
+{{- $prodID := printf "-//%s//Calendar//EN" $calendarName -}}
+{{- if isset $calendarConfig "prodID" -}}
+  {{- $prodID = printf "%v" (index $calendarConfig "prodID") -}}
+{{- end -}}
+{{- $calendarDescription := printf "%s calendar feed" $calendarName -}}
+{{- if isset $calendarConfig "calendarDescription" -}}
+  {{- $calendarDescription = htmlUnescape (printf "%v" (index $calendarConfig "calendarDescription")) -}}
+{{- end -}}
+{{- $entries := partial "events/pages.html" . -}}
+{{ printf "BEGIN:VCALENDAR\r\n" }}
+{{ partial "events/ics-line.html" (dict "name" "PRODID" "value" $prodID) }}
+{{ partial "events/ics-line.html" (dict "name" "CALSCALE" "value" "GREGORIAN") }}
+{{ partial "events/ics-line.html" (dict "name" "METHOD" "value" "PUBLISH") }}
+{{ partial "events/ics-line.html" (dict "name" "VERSION" "value" "2.0") }}
+{{ partial "events/ics-line.html" (dict "name" "X-WR-CALNAME" "value" $calendarName) }}
+{{ partial "events/ics-line.html" (dict "name" "X-WR-CALDESC" "value" $calendarDescription) }}
+{{ partial "events/ics-line.html" (dict "name" "NAME" "value" $calendarName) }}
+{{ partial "events/ics-line.html" (dict "name" "DESCRIPTION" "value" $calendarDescription) }}
+{{ partial "events/ics-line.html" (dict "name" "REFRESH-INTERVAL;VALUE=DURATION" "value" "PT1H") }}
+{{ partial "events/ics-line.html" (dict "name" "X-PUBLISHED-TTL" "value" "PT1H") }}
+{{- range $entries }}
+{{- $page := .page -}}
+{{- $eventParams := $page.Params.event -}}
+{{- $startRaw := or $eventParams.startdate $eventParams.startDate -}}
+{{- $endRaw := or $eventParams.enddate $eventParams.endDate $startRaw -}}
+{{- $start := time.AsTime $startRaw -}}
+{{- $end := time.AsTime $endRaw -}}
+{{- if lt ($end.Unix) ($start.Unix) -}}
+  {{- $end = $start -}}
+{{- end -}}
+{{- $eventStamp := or $page.Lastmod $page.Date $start -}}
+{{- $eventURL := or $eventParams.external_url $eventParams.rsvp $page.Params.link $page.Permalink -}}
+{{- $summary := htmlUnescape (printf "%v" $page.Title) -}}
+{{- $summary = replace $summary "\\" "\\\\" -}}
+{{- $summary = replace $summary ";" "\\;" -}}
+{{- $summary = replace $summary "," "\\," -}}
+{{- $summary = replaceRE "\\r?\\n+" "\\n" $summary -}}
+{{- $description := htmlUnescape (printf "%v" (or $eventParams.calendar_description $eventParams.ics_description $eventParams.ICSDescription $page.Params.description ($page.Summary | plainify))) -}}
+{{- $description = replace $description "\\" "\\\\" -}}
+{{- $description = replace $description ";" "\\;" -}}
+{{- $description = replace $description "," "\\," -}}
+{{- $description = replaceRE "\\r?\\n+" "\\n" $description -}}
+{{- $location := htmlUnescape (printf "%v" (or $eventParams.location $page.Params.location "")) -}}
+{{- $location = replace $location "\\" "\\\\" -}}
+{{- $location = replace $location ";" "\\;" -}}
+{{- $location = replace $location "," "\\," -}}
+{{- $location = replaceRE "\\r?\\n+" "\\n" $location -}}
+{{- $uidSource := $page.RelPermalink | urlize -}}
+{{- with $page.File -}}
+  {{- $uidSource = .UniqueID -}}
+{{- end -}}
+{{ printf "BEGIN:VEVENT\r\n" }}
+{{ partial "events/ics-line.html" (dict "name" "DTSTAMP" "value" (dateFormat "20060102T150405Z" ($eventStamp.UTC))) }}
+{{ partial "events/ics-line.html" (dict "name" "STATUS" "value" (cond ($page.Params.cancelled | default false) "CANCELLED" "CONFIRMED")) }}
+{{ partial "events/ics-line.html" (dict "name" "UID" "value" (printf "%s-%s@%s" (dateFormat "20060102T150405" $start) $uidSource $uidDomain)) }}
+{{ partial "events/ics-line.html" (dict "name" "DTSTART" "value" (dateFormat "20060102T150405Z" ($start.UTC))) }}
+{{ partial "events/ics-line.html" (dict "name" "DTEND" "value" (dateFormat "20060102T150405Z" ($end.UTC))) }}
+{{ partial "events/ics-line.html" (dict "name" "SUMMARY" "value" $summary) }}
+{{ partial "events/ics-line.html" (dict "name" "DESCRIPTION" "value" (printf "%s%s" $description (cond $eventURL (printf " (Info: %s)" $eventURL) ""))) }}
+{{- with $location }}
+{{ partial "events/ics-line.html" (dict "name" "LOCATION" "value" .) }}
+{{- end }}
+{{ printf "END:VEVENT\r\n" }}
+{{- end }}
+{{ printf "END:VCALENDAR\r\n" }}
