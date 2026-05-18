@@ -1,0 +1,50 @@
+package eventsmodule_test
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestExampleSiteBuildIncludesNestedEventsAndICSFeed(t *testing.T) {
+	repoRoot, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+
+	outDir := filepath.Join(t.TempDir(), "public")
+	cmd := exec.Command("go", "run", "github.com/gohugoio/hugo@v0.150.0", "--source", "exampleSite", "--destination", outDir)
+	cmd.Dir = repoRoot
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("build example site: %v\n%s", err, output)
+	}
+
+	feed, err := os.ReadFile(filepath.Join(outDir, "events", "index.ics"))
+	if err != nil {
+		t.Fatalf("read generated feed: %v", err)
+	}
+
+	feedText := string(feed)
+	if !strings.Contains(feedText, "SUMMARY:Demo Event Nested") {
+		t.Fatalf("generated feed should include nested event, got:\n%s", feedText)
+	}
+	if strings.Contains(feedText, "X-PUBLISHED-TTL:PT1HBEGIN:VEVENT") {
+		t.Fatalf("generated feed should keep calendar headers and VEVENT lines separated, got:\n%s", feedText)
+	}
+
+	nestedPage, err := os.ReadFile(filepath.Join(outDir, "events", "2026", "06", "demo-event-nested", "index.html"))
+	if err != nil {
+		t.Fatalf("read nested event page: %v", err)
+	}
+
+	nestedText := string(nestedPage)
+	if !strings.Contains(nestedText, "Demo Event Nested") {
+		t.Fatalf("nested event page missing title, got:\n%s", nestedText)
+	}
+	if !strings.Contains(nestedText, "Add to Calendar") {
+		t.Fatalf("nested event page missing calendar link, got:\n%s", nestedText)
+	}
+}

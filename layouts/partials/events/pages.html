@@ -1,0 +1,29 @@
+{{- $pages := slice -}}
+{{- with .RegularPagesRecursive -}}
+  {{- $pages = . -}}
+{{- else -}}
+  {{- with .RegularPages -}}
+    {{- $pages = . -}}
+  {{- else -}}
+    {{- with .Pages -}}
+      {{- $pages = . -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $entries := slice -}}
+{{- range $pages -}}
+  {{- $page := . -}}
+  {{- with $page.Params.event -}}
+    {{- $startRaw := or .startdate .startDate -}}
+    {{- if $startRaw -}}
+      {{- $entries = $entries | append (dict
+        "page" $page
+        "startRaw" $startRaw
+        "startSort" ((time.AsTime $startRaw).UTC.Format "2006-01-02T15:04:05Z07:00")
+      ) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return sort $entries "startSort" -}}

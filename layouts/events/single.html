@@ -1,0 +1,32 @@
+{{ define "main" -}}
+{{- $event := .Params.event -}}
+{{- $startRaw := or $event.startdate $event.startDate -}}
+{{- $endRaw := or $event.enddate $event.endDate -}}
+{{- $start := cond $startRaw (time.AsTime $startRaw) nil -}}
+<div class="post">
+  <h1>{{ .Title }}</h1>
+  {{- with $start }}
+  <time datetime="{{ .Format "2006-01-02T15:04:05Z0700" }}" class="post-date">{{ .Local.Format "Mon, Jan 2, 2006" }}</time>
+  <br>Starts:&nbsp;{{ .Local.Format "Monday - Jan 2, 2006 3:04PM" }}
+  {{- end }}
+  {{- with $endRaw }}
+  {{- $end := time.AsTime . -}}
+  <br>Ends:&nbsp;{{ $end.Local.Format "Monday - Jan 2, 2006 3:04PM" }}
+  {{- end }}
+  {{- with $event.location }}
+  <br>Location:&nbsp;{{ . }}
+  {{- end }}
+  {{- with $event.rsvp }}
+  <br><a href="{{ . }}">RSVP</a>
+  {{- end }}
+  {{- with $event.external_url }}
+  <br><a href="{{ . }}">More info</a>
+  {{- end }}
+  {{- with .OutputFormats.Get "Calendar" }}
+  <br><a href="{{ .RelPermalink }}" type="text/calendar">Add to Calendar</a>
+  {{- end }}
+
+  <br><br>
+  {{ .Content }}
+</div>
+{{- end }}

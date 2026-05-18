@@ -1,0 +1,6 @@
+{{- $name := printf "%v" .name -}}
+{{- $value := printf "%v" .value -}}
+{{- $line := printf "%s:%s" $name $value -}}
+{{- $folded := replaceRE "(.{1,65})" "${1}\r\n " $line -}}
+{{- $folded = replaceRE "\r\n $" "" $folded -}}
+{{- printf "%s\r\n" $folded -}}
