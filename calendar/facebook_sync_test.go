@@ -113,6 +113,24 @@ func TestRemoveGeneratedEventFilesSkipsFilesWithoutGeneratedMetadata(t *testing.
 	assertExists(t, filepath.Join(dir, "e-old.md"))
 }
 
+func TestRemoveGeneratedEventFilesSkipsFilesWithDifferentGeneratedBy(t *testing.T) {
+	dir := t.TempDir()
+	oldTime := time.Now().Add(-10 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	writeFile(t, filepath.Join(dir, "e-old.md"), strings.Join([]string{
+		"---",
+		"generated_by: some-other-generator",
+		"generated_at: " + oldTime,
+		"---",
+		"old",
+	}, "\n"))
+
+	if err := removeGeneratedEventFiles(dir, "e-", 7, time.Now()); err != nil {
+		t.Fatalf("remove generated files: %v", err)
+	}
+
+	assertExists(t, filepath.Join(dir, "e-old.md"))
+}
+
 func TestSyncFacebookEvents(t *testing.T) {
 	dir := t.TempDir()
 	outputDir := filepath.Join(dir, "events")
