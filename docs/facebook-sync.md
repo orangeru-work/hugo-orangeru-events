@@ -16,8 +16,9 @@ From a user point of view, the sync does this:
 7. Converts supported GPS coordinate text to Google Maps links.
 8. Leaves feature images unset (no generated `feature-img` field).
 9. Keeps previously generated files by default.
-10. Can optionally delete generated events older than a configured number of days.
-11. (exampleSite workflow only) opts into deleting generated events older than 30 days.
+10. Preserves unchanged generated files instead of rewriting them just to refresh `generated_at`.
+11. Can optionally delete generated events older than a configured number of days.
+12. (exampleSite workflow only) opts into deleting generated events older than 30 days.
 
 The module expects event metadata in the `event` block (for example,
 `event.startdate`, `event.category`, `event.location`).

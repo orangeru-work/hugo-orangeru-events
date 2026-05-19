@@ -36,6 +36,8 @@ event:
 
 const generatedByValue = "facebook-events"
 
+var generatedAtLinePattern = regexp.MustCompile(`(?m)^generated_at: .*$`)
+
 // SyncConfig controls Facebook ICS -> Hugo event page generation.
 type SyncConfig struct {
 	ICSPath             string
@@ -105,12 +107,7 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 		}
 
 		outputPath := filepath.Join(cfg.OutputDir, e.UID+".md")
-		f, err := os.Create(outputPath)
-		if err != nil {
-			return err
-		}
-
-		if _, err := f.Write([]byte(fmt.Sprintf(outputFmt,
+		content := fmt.Sprintf(outputFmt,
 			e.Summary,
 			e.Created,
 			"post",
@@ -123,17 +120,38 @@ func SyncFacebookEvents(cfg SyncConfig) error {
 			e.Location,
 			indentMultiline(e.ICSDescription, "    "),
 			e.Description,
-		))); err != nil {
-			_ = f.Close()
+		)
+
+		unchanged, err := generatedEventContentUnchanged(outputPath, content)
+		if err != nil {
 			return err
 		}
+		if unchanged {
+			continue
+		}
 
-		if err := f.Close(); err != nil {
+		if err := os.WriteFile(outputPath, []byte(content), 0o644); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func generatedEventContentUnchanged(path, next string) (bool, error) {
+	current, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return normalizeGeneratedAt(string(current)) == normalizeGeneratedAt(next), nil
+}
+
+func normalizeGeneratedAt(content string) string {
+	return generatedAtLinePattern.ReplaceAllString(content, "generated_at: <preserved>")
 }
 
 func removeGeneratedEventFiles(outputDir, cleanupPrefix string, deleteOlderThanDays int, now time.Time) error {
