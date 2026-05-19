@@ -84,7 +84,7 @@
 {{- end -}}
 {{- $calendarId := printf "events-calendar-%s" $idBase -}}
 {{- $legendId := printf "events-legend-%s" $idBase -}}
-{{- $detailsId := printf "events-details-%s" $idBase -}}
+{{- $tooltipId := printf "events-tooltip-%s" $idBase -}}
 {{- $showPastId := printf "events-show-past-%s" $idBase -}}
 {{- $subscribeId := printf "events-subscribe-%s" $idBase -}}
 {{- $subscribeMenuId := printf "events-subscribe-menu-%s" $idBase -}}
@@ -229,26 +229,47 @@
     border: 1px solid rgba(17, 24, 39, 0.35);
     flex: 0 0 auto;
   }
-  .events-calendar-details {
-    margin-top: 1rem;
-    padding: .9rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background: #fafafa;
+  .events-calendar-hovercard {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    max-width: min(24rem, calc(100vw - 1.5rem));
+    padding: .85rem .95rem;
+    border: 1px solid #d1d5db;
+    border-radius: .75rem;
+    background: #fff;
+    box-shadow: 0 18px 40px rgba(17, 24, 39, 0.16);
+    color: #111827;
+    pointer-events: none;
   }
-  .events-calendar-links {
-    margin-top: .65rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: .6rem;
+  .events-calendar-hovercard h3 {
+    margin: 0 0 .35rem;
+    font-size: 1rem;
+    line-height: 1.2;
   }
-  .events-calendar-description p {
+  .events-calendar-hovercard-meta,
+  .events-calendar-hovercard-hint {
+    margin: .3rem 0 0;
+    color: #374151;
+    font-size: .9rem;
+  }
+  .events-calendar-hovercard-hint {
+    font-weight: 600;
+  }
+  .events-calendar-hovercard-description {
+    margin-top: .55rem;
+    max-height: 8rem;
+    overflow: hidden;
+    font-size: .92rem;
+  }
+  .events-calendar-hovercard-description p {
     margin: .5rem 0;
   }
-  .events-calendar-description p:first-child {
+  .events-calendar-hovercard-description p:first-child {
     margin-top: 0;
   }
-  .events-calendar-description p:last-child {
+  .events-calendar-hovercard-description p:last-child {
     margin-bottom: 0;
   }
   .events-calendar-noscript-list {
@@ -290,10 +311,7 @@
 
 <div id="{{ $calendarId }}"></div>
 
-<div id="{{ $detailsId }}" class="events-calendar-details">
-  <strong>Event details</strong>
-  <p>Select an event to preview details and links.</p>
-</div>
+<div id="{{ $tooltipId }}" class="events-calendar-hovercard" role="tooltip" hidden></div>
 
 <noscript>
   <h3>Upcoming Events</h3>
@@ -322,13 +340,14 @@
     const subscribeButton = document.getElementById('{{ $subscribeId }}');
     const subscribeMenu = document.getElementById('{{ $subscribeMenuId }}');
     const legendContainer = document.getElementById('{{ $legendId }}');
-    const detailsContainer = document.getElementById('{{ $detailsId }}');
+    const hovercard = document.getElementById('{{ $tooltipId }}');
     const allEvents = {{ $events | jsonify | safeJS }};
     const icsFeedUrl = {{ $subscribeFeedURL | jsonify | safeJS }};
     const configuredCategoryColors = {{ $categoryColors | jsonify | safeJS }};
     const selectedCategories = new Set();
     const legendButtons = new Map();
     const categoryColorMap = new Map();
+    let hovercardAnchor = null;
 
     const defaultCategoryColor = '#e5e7eb';
     const palette = [
@@ -461,69 +480,96 @@
         });
     }
 
-    function eventLink(label, href) {
-      if (!href) return null;
-      const link = document.createElement('a');
-      link.href = href;
-      link.target = '_blank';
-      link.rel = 'noreferrer';
-      link.textContent = label;
-      return link;
+    function eventDateText(event) {
+      const start = event.start ? event.start.toLocaleString() : '';
+      const end = event.end ? event.end.toLocaleString() : '';
+      return end ? `${start} - ${end}` : start;
     }
 
-    function renderDetails(event) {
-      detailsContainer.replaceChildren();
-
+    function renderHovercardContent(event) {
+      if (!hovercard) return;
+      hovercard.replaceChildren();
       const title = document.createElement('h3');
       title.textContent = event.title;
-      detailsContainer.appendChild(title);
+      hovercard.appendChild(title);
 
       const meta = document.createElement('p');
       const category = normalizeCategory(event.extendedProps && event.extendedProps.category);
+      meta.className = 'events-calendar-hovercard-meta';
       meta.textContent = `Category: ${categoryLabel(category)}`;
-      detailsContainer.appendChild(meta);
+      hovercard.appendChild(meta);
 
       const when = document.createElement('p');
-      const start = event.start ? event.start.toLocaleString() : '';
-      const end = event.end ? event.end.toLocaleString() : '';
-      when.textContent = end ? `${start} - ${end}` : start;
-      detailsContainer.appendChild(when);
+      when.className = 'events-calendar-hovercard-meta';
+      when.textContent = eventDateText(event);
+      hovercard.appendChild(when);
 
       const location = event.extendedProps && event.extendedProps.location;
       if (location) {
         const where = document.createElement('p');
+        where.className = 'events-calendar-hovercard-meta';
         where.textContent = `Location: ${location}`;
-        detailsContainer.appendChild(where);
+        hovercard.appendChild(where);
       }
 
       const descriptionHTML = event.extendedProps && event.extendedProps.descriptionHTML;
       const description = event.extendedProps && event.extendedProps.description;
       if (descriptionHTML || description) {
         const desc = document.createElement('div');
-        desc.className = 'events-calendar-description';
+        desc.className = 'events-calendar-hovercard-description';
         if (descriptionHTML) {
           desc.innerHTML = descriptionHTML;
         } else {
           desc.textContent = description;
         }
-        detailsContainer.appendChild(desc);
+        hovercard.appendChild(desc);
       }
 
-      const links = document.createElement('div');
-      links.className = 'events-calendar-links';
+      const hint = document.createElement('p');
+      hint.className = 'events-calendar-hovercard-hint';
+      hint.textContent = 'Click to view event page';
+      hovercard.appendChild(hint);
+    }
 
-      const detailsLink = eventLink('View event details', event.url);
-      if (detailsLink) links.appendChild(detailsLink);
+    function positionHovercard(anchorEl) {
+      if (!hovercard || !anchorEl || hovercard.hasAttribute('hidden')) return;
+      const gap = 12;
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const cardRect = hovercard.getBoundingClientRect();
+      let top = anchorRect.bottom + gap;
+      let left = anchorRect.left;
 
-      const rsvpLink = eventLink('RSVP', event.extendedProps && event.extendedProps.rsvpURL);
-      if (rsvpLink) links.appendChild(rsvpLink);
-
-      const externalLink = eventLink('External event page', event.extendedProps && event.extendedProps.externalURL);
-      if (externalLink) links.appendChild(externalLink);
-
-      if (links.children.length > 0) {
-        detailsContainer.appendChild(links);
+      if (top + cardRect.height > window.innerHeight - gap) {
+        top = Math.max(gap, anchorRect.top - cardRect.height - gap);
       }
+      if (left + cardRect.width > window.innerWidth - gap) {
+        left = window.innerWidth - cardRect.width - gap;
+      }
+      left = Math.max(gap, left);
+
+      hovercard.style.top = `${top}px`;
+      hovercard.style.left = `${left}px`;
+    }
+
+    function showHovercard(event, anchorEl) {
+      if (!hovercard || !anchorEl) return;
+      renderHovercardContent(event);
+      hovercard.removeAttribute('hidden');
+      hovercardAnchor = anchorEl;
+      anchorEl.setAttribute('aria-describedby', hovercard.id);
+      positionHovercard(anchorEl);
+    }
+
+    function hideHovercard(anchorEl) {
+      if (!hovercard) return;
+      if (anchorEl) {
+        anchorEl.removeAttribute('aria-describedby');
+      }
+      if (hovercardAnchor === anchorEl || !anchorEl) {
+        hovercardAnchor = null;
+      }
+      hovercard.setAttribute('hidden', '');
+      hovercard.replaceChildren();
     }
 
     function buildLegend(calendar) {
@@ -598,9 +644,19 @@
       events: (_fetchInfo, successCallback) => {
         successCallback(filteredEvents());
       },
-      eventClick: (info) => {
-        info.jsEvent.preventDefault();
-        renderDetails(info.event);
+      eventDidMount: (info) => {
+        const show = () => showHovercard(info.event, info.el);
+        const hide = () => hideHovercard(info.el);
+
+        info.el.addEventListener('mouseenter', show);
+        info.el.addEventListener('mouseleave', hide);
+        info.el.addEventListener('focus', show);
+        info.el.addEventListener('blur', hide);
+      },
+      eventWillUnmount: (info) => {
+        if (hovercardAnchor === info.el) {
+          hideHovercard(info.el);
+        }
       }
     });
 
@@ -666,18 +722,22 @@
     }
 
     if (showPastToggle) {
-      showPastToggle.addEventListener('change', () => calendar.refetchEvents());
+      showPastToggle.addEventListener('change', () => {
+        hideHovercard(hovercardAnchor);
+        calendar.refetchEvents();
+      });
+    }
+
+    if (hovercard) {
+      const repositionHovercard = () => {
+        if (hovercardAnchor) {
+          positionHovercard(hovercardAnchor);
+        }
+      };
+      window.addEventListener('resize', repositionHovercard);
+      window.addEventListener('scroll', repositionHovercard, true);
     }
 
     calendar.render();
-
-    const firstUpcoming = filteredEvents()[0];
-    if (firstUpcoming) {
-      renderDetails({
-        ...firstUpcoming,
-        start: new Date(firstUpcoming.start),
-        end: firstUpcoming.end ? new Date(firstUpcoming.end) : null
-      });
-    }
   })();
 </script>

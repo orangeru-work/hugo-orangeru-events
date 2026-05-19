@@ -47,4 +47,17 @@ func TestExampleSiteBuildIncludesNestedEventsAndICSFeed(t *testing.T) {
 	if !strings.Contains(nestedText, "Add to Calendar") {
 		t.Fatalf("nested event page missing calendar link, got:\n%s", nestedText)
 	}
+
+	calendarPage, err := os.ReadFile(filepath.Join(outDir, "events", "index.html"))
+	if err != nil {
+		t.Fatalf("read calendar page: %v", err)
+	}
+
+	calendarText := string(calendarPage)
+	if strings.Contains(calendarText, "Select an event to preview details and links.") {
+		t.Fatalf("calendar page should not render the old inline details prompt, got:\n%s", calendarText)
+	}
+	if !strings.Contains(calendarText, "events-calendar-hovercard") {
+		t.Fatalf("calendar page missing hovercard markup, got:\n%s", calendarText)
+	}
 }
