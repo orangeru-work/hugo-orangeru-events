@@ -272,50 +272,6 @@ func TestSyncFacebookEventsKeepsGeneratedFilesByDefault(t *testing.T) {
 	assertExists(t, filepath.Join(outputDir, "e-going.md"))
 }
 
-func TestSyncFacebookEventsDoesNotRewriteUnchangedFiles(t *testing.T) {
-	dir := t.TempDir()
-	outputDir := filepath.Join(dir, "events")
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		t.Fatalf("mkdir output: %v", err)
-	}
-
-	icsPath := filepath.Join(dir, "events.ics")
-	writeFile(t, icsPath, facebookFixture(t, time.Now().UTC()))
-
-	cfg := SyncConfig{
-		ICSPath:            icsPath,
-		OutputDir:          outputDir,
-		CleanupPrefix:      "e-",
-		GoingCategory:      "going-cat",
-		InterestedCategory: "interested-cat",
-		DefaultCategory:    "default-cat",
-	}
-
-	if err := SyncFacebookEvents(cfg); err != nil {
-		t.Fatalf("first sync facebook events: %v", err)
-	}
-
-	before, err := os.ReadFile(filepath.Join(outputDir, "e-going.md"))
-	if err != nil {
-		t.Fatalf("read first generated file: %v", err)
-	}
-
-	time.Sleep(1100 * time.Millisecond)
-
-	if err := SyncFacebookEvents(cfg); err != nil {
-		t.Fatalf("second sync facebook events: %v", err)
-	}
-
-	after, err := os.ReadFile(filepath.Join(outputDir, "e-going.md"))
-	if err != nil {
-		t.Fatalf("read second generated file: %v", err)
-	}
-
-	if string(after) != string(before) {
-		t.Fatalf("expected unchanged generated file to be preserved across syncs")
-	}
-}
-
 func facebookFixture(t *testing.T, base time.Time) string {
 	t.Helper()
 	rawFixture, err := os.ReadFile(filepath.Join("testdata", "facebook_fixture.ics"))
