@@ -9,6 +9,7 @@
     <link rel="icon" href='{{ "icons/icon.svg" | relURL }}' type="image/svg+xml">
     <link rel="icon" href='{{ "icons/icon-192.png" | relURL }}' sizes="192x192" type="image/png">
     <link rel="apple-touch-icon" href='{{ "icons/icon-192.png" | relURL }}'>
+    {{ partial "events/schema.html" . }}
     <title>{{ if .Title }}{{ .Title }} | {{ end }}{{ .Site.Title }}</title>
     <style>
       body {

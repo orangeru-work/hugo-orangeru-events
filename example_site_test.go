@@ -47,4 +47,18 @@ func TestExampleSiteBuildIncludesNestedEventsAndICSFeed(t *testing.T) {
 	if !strings.Contains(nestedText, "Add to Calendar") {
 		t.Fatalf("nested event page missing calendar link, got:\n%s", nestedText)
 	}
+	for _, want := range []string{
+		`<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event"`,
+		`"startDate":"2026-06-18T18:30:00-07:00"`,
+		`"endDate":"2026-06-18T20:00:00-07:00"`,
+		`"location":{"@type":"Place","name":"Nested Folder Venue"}`,
+		`"description":"This sample event lives in a nested year/month folder to verify recursive event discovery."`,
+	} {
+		if !strings.Contains(nestedText, want) {
+			t.Fatalf("nested event page missing %q, got:\n%s", want, nestedText)
+		}
+	}
+	if strings.Contains(nestedText, `<script type="application/ld+json">"{`) {
+		t.Fatalf("nested event schema should render raw JSON, got:\n%s", nestedText)
+	}
 }
