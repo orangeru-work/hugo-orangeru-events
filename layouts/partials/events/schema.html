@@ -1,5 +1,21 @@
+{{- $calendarConfig := dict -}}
+{{- with .Site.Params.eventsCalendar -}}
+  {{- $calendarConfig = . -}}
+{{- end -}}
+{{- with .Site.Params.eventscalendar -}}
+  {{- $calendarConfig = merge $calendarConfig . -}}
+{{- end -}}
+{{- with or .Params.eventsCalendar .Params.eventscalendar -}}
+  {{- $calendarConfig = merge $calendarConfig . -}}
+{{- end -}}
+{{- $disableSchema := false -}}
+{{- if isset $calendarConfig "disableSchema" -}}
+  {{- $disableSchema = index $calendarConfig "disableSchema" -}}
+{{- else if isset $calendarConfig "disableschema" -}}
+  {{- $disableSchema = index $calendarConfig "disableschema" -}}
+{{- end -}}
 {{- $eventParam := .Params.event -}}
-{{- if $eventParam -}}
+{{- if and (not $disableSchema) $eventParam -}}
   {{- $event := dict -}}
   {{- if reflect.IsMap $eventParam -}}
     {{- $event = $eventParam -}}
