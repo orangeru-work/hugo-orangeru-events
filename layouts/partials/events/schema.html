@@ -1,0 +1,36 @@
+{{- $eventParam := .Params.event -}}
+{{- if $eventParam -}}
+  {{- $event := dict -}}
+  {{- if reflect.IsMap $eventParam -}}
+    {{- $event = $eventParam -}}
+  {{- end -}}
+  {{- $startDate := or $event.startdate $event.startDate .Params.startdate .Params.startDate -}}
+  {{- if $startDate -}}
+    {{- $schema := dict
+      "@context" "https://schema.org"
+      "@type" "Event"
+      "name" .Title
+      "startDate" $startDate
+      "eventAttendanceMode" "https://schema.org/OfflineEventAttendanceMode"
+      "eventStatus" "https://schema.org/EventScheduled"
+      "url" .Permalink
+      "organizer" (dict
+        "@type" "Organization"
+        "name" .Site.Title
+        "url" .Site.BaseURL
+      )
+    -}}
+    {{- with or $event.enddate $event.endDate .Params.enddate .Params.endDate -}}
+      {{- $schema = merge $schema (dict "endDate" .) -}}
+    {{- end -}}
+    {{- with or .Description $event.calendar_description $event.ics_description (plainify .Summary) -}}
+      {{- $description := replaceRE "(^\\s+|\\s+$)" "" (replaceRE "\\s+" " " (plainify .)) -}}
+      {{- $schema = merge $schema (dict "description" $description) -}}
+    {{- end -}}
+    {{- with or $event.location .Params.location -}}
+      {{- $locationName := replaceRE "(^\\s+|\\s+$)" "" (replaceRE "\\s+" " " (plainify .)) -}}
+      {{- $schema = merge $schema (dict "location" (dict "@type" "Place" "name" $locationName)) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $schema | jsonify | safeJS }}</script>
+  {{- end -}}
+{{- end -}}
