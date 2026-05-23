@@ -11,7 +11,7 @@ Reusable Hugo module for interactive event calendars, event detail pages, and IC
 - `layouts/events/single.calendar.ics`
 - FullCalendar month/week/list views
 - Category legend with filtering
-- Event detail preview panel
+- Hover/focus event preview popover with click-through navigation
 - Optional mobile-aware subscribe button for an ICS feed
 
 ## Quick start
@@ -151,8 +151,8 @@ When subscribe is enabled:
 
 ## External link rendering
 
-- If `ICSDescription` includes the same URL as `external_url`, the duplicate raw URL is removed from the details description
-- The event details panel keeps a single labeled link: **External event page**
+- If `ICSDescription` includes the same URL as `external_url`, the duplicate raw URL is removed from the hover preview description
+- Clicking a calendar event opens its event page, where the external link remains available
 
 ## exampleSite
 
