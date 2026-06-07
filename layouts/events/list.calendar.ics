@@ -5,6 +5,8 @@
 {{- $calendarName := htmlUnescape (printf "%v" .Site.Title) -}}
 {{- if isset $calendarConfig "calendarName" -}}
   {{- $calendarName = htmlUnescape (printf "%v" (index $calendarConfig "calendarName")) -}}
+{{- else if isset $calendarConfig "calendarname" -}}
+  {{- $calendarName = htmlUnescape (printf "%v" (index $calendarConfig "calendarname")) -}}
 {{- end -}}
 {{- $baseURL := site.BaseURL | default "" -}}
 {{- $uidDomain := replaceRE "^https?://([^/]+)/?.*$" "$1" $baseURL -}}
@@ -13,14 +15,20 @@
 {{- end -}}
 {{- if isset $calendarConfig "uidDomain" -}}
   {{- $uidDomain = printf "%v" (index $calendarConfig "uidDomain") -}}
+{{- else if isset $calendarConfig "uiddomain" -}}
+  {{- $uidDomain = printf "%v" (index $calendarConfig "uiddomain") -}}
 {{- end -}}
 {{- $prodID := printf "-//%s//Calendar//EN" $calendarName -}}
 {{- if isset $calendarConfig "prodID" -}}
   {{- $prodID = printf "%v" (index $calendarConfig "prodID") -}}
+{{- else if isset $calendarConfig "prodid" -}}
+  {{- $prodID = printf "%v" (index $calendarConfig "prodid") -}}
 {{- end -}}
 {{- $calendarDescription := printf "%s calendar feed" $calendarName -}}
 {{- if isset $calendarConfig "calendarDescription" -}}
   {{- $calendarDescription = htmlUnescape (printf "%v" (index $calendarConfig "calendarDescription")) -}}
+{{- else if isset $calendarConfig "calendardescription" -}}
+  {{- $calendarDescription = htmlUnescape (printf "%v" (index $calendarConfig "calendardescription")) -}}
 {{- end -}}
 {{- $entries := partial "events/pages.html" . -}}
 {{ printf "BEGIN:VCALENDAR\r\n" }}

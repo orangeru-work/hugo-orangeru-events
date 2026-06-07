@@ -9,6 +9,8 @@
   {{- $renderInContent := false -}}
   {{- if isset $calendarConfig "renderInContent" -}}
     {{- $renderInContent = index $calendarConfig "renderInContent" -}}
+  {{- else if isset $calendarConfig "renderincontent" -}}
+    {{- $renderInContent = index $calendarConfig "renderincontent" -}}
   {{- end -}}
   <h1>{{ .Title }}</h1>
   {{ .Content }}

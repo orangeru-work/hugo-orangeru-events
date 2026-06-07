@@ -9,16 +9,22 @@
 {{- $categoryColors := dict -}}
 {{- if isset $calendarConfig "categoryColors" -}}
   {{- $categoryColors = index $calendarConfig "categoryColors" -}}
+{{- else if isset $calendarConfig "categorycolors" -}}
+  {{- $categoryColors = index $calendarConfig "categorycolors" -}}
 {{- end -}}
 
 {{- $showSubscribeButton := true -}}
 {{- if isset $calendarConfig "showSubscribeButton" -}}
   {{- $showSubscribeButton = index $calendarConfig "showSubscribeButton" -}}
+{{- else if isset $calendarConfig "showsubscribebutton" -}}
+  {{- $showSubscribeButton = index $calendarConfig "showsubscribebutton" -}}
 {{- end -}}
 
 {{- $subscribeFeedURL := printf "%sindex.ics" .RelPermalink -}}
 {{- if isset $calendarConfig "subscribeFeedURL" -}}
   {{- $subscribeFeedURL = printf "%v" (index $calendarConfig "subscribeFeedURL") -}}
+{{- else if isset $calendarConfig "subscribefeedurl" -}}
+  {{- $subscribeFeedURL = printf "%v" (index $calendarConfig "subscribefeedurl") -}}
 {{- end -}}
 
 {{- $entries := partial "events/pages.html" . -}}
