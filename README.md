@@ -49,7 +49,22 @@ cascade:
 ---
 ```
 
-4. If you want a custom list layout, you can still render the shared calendar partial directly:
+4. By default the shared list template renders the calendar after the section content.
+
+5. If you want to place the calendar inside the section content, set `eventsCalendar.renderInContent: true` in that page's front matter and use the shortcode:
+
+```yaml
+---
+eventsCalendar:
+  renderInContent: true
+---
+```
+
+```markdown
+{{< interactive-calendar >}}
+```
+
+6. If you want a custom list layout, you can still render the shared calendar partial directly:
 
 ```go-html-template
 {{ partial "events/interactive-calendar.html" . }}
@@ -131,6 +146,7 @@ Options:
 - `showSubscribeButton` (bool, default `true`)
 - `subscribeFeedURL` (string, default `<section rel permalink>index.ics`)
 - `categoryColors` (map of category -> hex color)
+- `renderInContent` (bool, default `false`; skip the default post-content calendar render so content can place `{{< interactive-calendar >}}` inline)
 - `calendarName` (string, default `site.Title`)
 - `calendarDescription` (string, default `<calendarName> calendar feed`)
 - `uidDomain` (string, default derived from `site.BaseURL`)

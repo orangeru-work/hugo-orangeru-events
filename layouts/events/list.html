@@ -1,5 +1,18 @@
 {{ define "main" }}
+  {{- $calendarConfig := dict -}}
+  {{- with .Site.Params.eventsCalendar -}}
+    {{- $calendarConfig = . -}}
+  {{- end -}}
+  {{- with .Params.eventsCalendar -}}
+    {{- $calendarConfig = merge $calendarConfig . -}}
+  {{- end -}}
+  {{- $renderInContent := false -}}
+  {{- if isset $calendarConfig "renderInContent" -}}
+    {{- $renderInContent = index $calendarConfig "renderInContent" -}}
+  {{- end -}}
   <h1>{{ .Title }}</h1>
   {{ .Content }}
-  {{ partial "events/interactive-calendar.html" . }}
+  {{- if not $renderInContent }}
+    {{ partial "events/interactive-calendar.html" . }}
+  {{- end }}
 {{ end }}
