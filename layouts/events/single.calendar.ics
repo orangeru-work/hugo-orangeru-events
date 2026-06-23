@@ -40,6 +40,7 @@
 {{- $summary = replace $summary "," "\\," -}}
 {{- $summary = replaceRE "\\r?\\n+" "\\n" $summary -}}
 {{- $description := htmlUnescape (printf "%v" (or $eventParams.calendar_description $eventParams.ics_description $eventParams.ICSDescription .Params.description (.Summary | plainify))) -}}
+{{- $description = trim $description " \n\r" -}}
 {{- $description = replace $description "\\" "\\\\" -}}
 {{- $description = replace $description ";" "\\;" -}}
 {{- $description = replace $description "," "\\," -}}
@@ -66,7 +67,7 @@
 {{ partial "events/ics-line.html" (dict "name" "DTSTART" "value" (dateFormat "20060102T150405Z" ($start.UTC))) }}
 {{ partial "events/ics-line.html" (dict "name" "DTEND" "value" (dateFormat "20060102T150405Z" ($end.UTC))) }}
 {{ partial "events/ics-line.html" (dict "name" "SUMMARY" "value" $summary) }}
-{{ partial "events/ics-line.html" (dict "name" "DESCRIPTION" "value" (printf "%s%s" $description (cond $eventURL (printf " (Info: %s)" $eventURL) ""))) }}
+{{ partial "events/ics-line.html" (dict "name" "DESCRIPTION" "value" (printf "%s%s" $description (cond $eventURL (printf "\\n\\nInfo: %s" $eventURL) ""))) }}
 {{- with $location }}
 {{ partial "events/ics-line.html" (dict "name" "LOCATION" "value" .) }}
 {{- end }}
