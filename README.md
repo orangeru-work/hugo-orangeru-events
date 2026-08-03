@@ -136,13 +136,15 @@ Options:
 - `uidDomain` (string, default derived from `site.BaseURL`)
 - `prodID` (string, default `-//<calendarName>//Calendar//EN`)
 
-## Mobile subscribe behavior
+## Subscribe behavior
 
 When subscribe is enabled:
 
-- It opens a subscribe options menu across platforms
-- The menu includes Google Calendar, Apple/webcal, Outlook.com, and copy-to-clipboard for the feed URL
-- Google Calendar uses a URL-encoded `webcal://` feed in `cid` for compatibility across clients
+- It opens a subscribe options menu.
+- The menu includes a checklist under **Categories to include** (defaulting to all selected) allowing users to choose which event categories to include.
+- Selecting a subset of categories dynamically updates all subscription links by appending a `?categories=...` query string to the feed URL, enabling serverless/edge/CDN layers to serve filtered calendar feeds.
+- The menu includes Google Calendar, Apple/webcal, Outlook.com, and copy-to-clipboard for the feed URL.
+- Google Calendar uses a URL-encoded `webcal://` feed in `cid` for compatibility across clients.
 
 ## Default month-view display
 
