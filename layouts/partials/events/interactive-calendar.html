@@ -711,11 +711,7 @@
           subscribeMenu.replaceChildren();
 
           const categories = sortedCategories();
-          const subscribeCheckedCategories = new Set(selectedCategories);
-          // If no categories are active in the main legend, default all to checked in subscription menu
-          if (subscribeCheckedCategories.size === 0) {
-            categories.forEach(cat => subscribeCheckedCategories.add(cat));
-          }
+          const subscribeCheckedCategories = new Set(categories);
 
           if (categories.length > 0) {
             const categoriesTitle = document.createElement('div');
